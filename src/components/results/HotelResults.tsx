@@ -5,18 +5,21 @@ import { Button } from '@/components/ui/button';
 import { Carousel, CarouselContent, CarouselItem, CarouselPrevious, CarouselNext } from '@/components/ui/carousel';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
-import { Star, Wifi, MapPin, Heart, Car, Coffee } from 'lucide-react';
+import { Star, Wifi, MapPin, Heart, Car, Coffee, Leaf, Fan, IndianRupee } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
-// Sample hotel data
+// Sample Indian hotel data
 const hotelData = [
   {
     id: 1,
-    name: 'Grand Plaza Hotel',
-    rating: 4.5,
-    price: 189,
-    address: '123 Main Street, Downtown',
-    amenities: ['wifi', 'parking', 'breakfast'],
-    description: 'Luxury hotel in the heart of downtown with stunning city views.',
+    name: 'Taj Palace New Delhi',
+    rating: 5,
+    price: 12500,
+    address: 'Diplomatic Enclave, New Delhi',
+    amenities: ['wifi', 'parking', 'breakfast', 'ac', 'pool', 'gym'],
+    vegetarianFriendly: true,
+    distanceFromStation: '4.5 km from New Delhi Railway Station',
+    description: 'Luxury 5-star hotel with elegant rooms, multiple dining options, and excellent service.',
     images: [
       'https://images.unsplash.com/photo-1472396961693-142e6e269027?fit=crop&w=600&h=400',
       'https://images.unsplash.com/photo-1482938289607-e9573fc25ebb?fit=crop&w=600&h=400',
@@ -25,12 +28,14 @@ const hotelData = [
   },
   {
     id: 2,
-    name: 'Oceanview Resort & Spa',
-    rating: 5,
-    price: 279,
-    address: '500 Beachfront Avenue, Coastal District',
-    amenities: ['wifi', 'parking', 'breakfast', 'spa'],
-    description: 'Premium beachfront resort with full-service spa and ocean views.',
+    name: 'OYO Townhouse 285',
+    rating: 3,
+    price: 2299,
+    address: 'Karol Bagh, New Delhi',
+    amenities: ['wifi', 'ac', 'breakfast'],
+    vegetarianFriendly: true,
+    distanceFromStation: '1.2 km from Karol Bagh Metro Station',
+    description: 'Budget-friendly hotel with clean rooms and essential amenities for travelers.',
     images: [
       'https://images.unsplash.com/photo-1500375592092-40eb2168fd21?fit=crop&w=600&h=400',
       'https://images.unsplash.com/photo-1482938289607-e9573fc25ebb?fit=crop&w=600&h=400',
@@ -39,23 +44,43 @@ const hotelData = [
   },
   {
     id: 3,
-    name: 'Mountain Retreat Lodge',
-    rating: 4,
-    price: 159,
-    address: '768 Alpine Road, Mountain View',
-    amenities: ['wifi', 'parking'],
-    description: 'Cozy mountain lodge with breathtaking nature views and hiking trails.',
+    name: 'Leela Palace New Delhi',
+    rating: 5,
+    price: 18500,
+    address: 'Diplomatic Enclave, Chanakyapuri, New Delhi',
+    amenities: ['wifi', 'parking', 'breakfast', 'ac', 'pool', 'spa', 'gym'],
+    vegetarianFriendly: true,
+    distanceFromStation: '7 km from New Delhi Railway Station',
+    description: 'Opulent 5-star hotel with royal decor, world-class dining, and impeccable service.',
     images: [
       'https://images.unsplash.com/photo-1469041797191-50ace28483c3?fit=crop&w=600&h=400',
       'https://images.unsplash.com/photo-1518877593221-1f28583780b4?fit=crop&w=600&h=400',
+      'https://images.unsplash.com/photo-1472396961693-142e6e269027?fit=crop&w=600&h=400'
+    ]
+  },
+  {
+    id: 4,
+    name: 'Hotel Aira Xing by Staybook',
+    rating: 3,
+    price: 1899,
+    address: 'Paharganj, New Delhi',
+    amenities: ['wifi', 'ac'],
+    vegetarianFriendly: true,
+    distanceFromStation: '0.5 km from New Delhi Railway Station',
+    description: 'Convenient budget hotel close to the railway station with basic amenities.',
+    images: [
+      'https://images.unsplash.com/photo-1518877593221-1f28583780b4?fit=crop&w=600&h=400',
+      'https://images.unsplash.com/photo-1469041797191-50ace28483c3?fit=crop&w=600&h=400',
       'https://images.unsplash.com/photo-1472396961693-142e6e269027?fit=crop&w=600&h=400'
     ]
   }
 ];
 
 const HotelResults: React.FC = () => {
-  const [priceRange, setPriceRange] = useState<number[]>([100, 300]);
+  const [priceRange, setPriceRange] = useState<number[]>([1000, 20000]);
   const [starFilter, setStarFilter] = useState('all');
+  const [vegFilter, setVegFilter] = useState('all');
+  const [acFilter, setAcFilter] = useState('all');
   const [savedHotels, setSavedHotels] = useState<number[]>([]);
 
   const handleSaveToggle = (hotelId: number) => {
@@ -69,12 +94,20 @@ const HotelResults: React.FC = () => {
   // Filter hotels
   const filteredHotels = hotelData.filter(hotel => {
     const matchesPrice = hotel.price >= priceRange[0] && hotel.price <= priceRange[1];
+    
     const matchesStars = starFilter === 'all' || 
       (starFilter === '3plus' && hotel.rating >= 3) ||
       (starFilter === '4plus' && hotel.rating >= 4) ||
       (starFilter === '5only' && hotel.rating === 5);
     
-    return matchesPrice && matchesStars;
+    const matchesVeg = vegFilter === 'all' || 
+      (vegFilter === 'veg' && hotel.vegetarianFriendly);
+    
+    const matchesAC = acFilter === 'all' || 
+      (acFilter === 'ac' && hotel.amenities.includes('ac')) || 
+      (acFilter === 'nonac' && !hotel.amenities.includes('ac'));
+    
+    return matchesPrice && matchesStars && matchesVeg && matchesAC;
   });
 
   // Helper for rendering amenity icons
@@ -83,6 +116,8 @@ const HotelResults: React.FC = () => {
       case 'wifi': return <Wifi className="h-4 w-4" />;
       case 'parking': return <Car className="h-4 w-4" />;
       case 'breakfast': return <Coffee className="h-4 w-4" />;
+      case 'ac': return <Fan className="h-4 w-4" />;
+      case 'veg': return <Leaf className="h-4 w-4 text-green-500" />;
       default: return null;
     }
   };
@@ -120,18 +155,18 @@ const HotelResults: React.FC = () => {
       <div className="flex flex-wrap justify-between gap-4">
         {/* Price range filter */}
         <div className="space-y-2 w-full md:w-64">
-          <label className="text-sm font-medium">Price range ($)</label>
+          <label className="text-sm font-medium">Price range (₹)</label>
           <Slider 
-            min={50} 
-            max={500} 
-            step={10}
+            min={500} 
+            max={25000} 
+            step={500}
             value={priceRange}
             onValueChange={setPriceRange}
             className="py-4"
           />
           <div className="flex justify-between text-xs text-muted-foreground">
-            <span>${priceRange[0]}</span>
-            <span>${priceRange[1]}</span>
+            <span>₹{priceRange[0].toLocaleString()}</span>
+            <span>₹{priceRange[1].toLocaleString()}</span>
           </div>
         </div>
 
@@ -147,6 +182,35 @@ const HotelResults: React.FC = () => {
               <SelectItem value="3plus">3+ Stars</SelectItem>
               <SelectItem value="4plus">4+ Stars</SelectItem>
               <SelectItem value="5only">5 Stars Only</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        
+        {/* Vegetarian filter */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Dining Options</label>
+          <Select value={vegFilter} onValueChange={setVegFilter}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="All Options" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Options</SelectItem>
+              <SelectItem value="veg">Vegetarian Friendly</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        
+        {/* AC/Non-AC filter */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Room Type</label>
+          <Select value={acFilter} onValueChange={setAcFilter}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="All Types" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Types</SelectItem>
+              <SelectItem value="ac">AC Rooms</SelectItem>
+              <SelectItem value="nonac">Non-AC Rooms</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -208,24 +272,35 @@ const HotelResults: React.FC = () => {
                     {hotel.address}
                   </div>
                   
+                  <div className="text-sm text-blue-600 mb-3">
+                    {hotel.distanceFromStation}
+                  </div>
+                  
                   <p className="text-sm mb-4">{hotel.description}</p>
                   
-                  <div className="flex gap-2 mb-4">
+                  <div className="flex flex-wrap gap-2 mb-4">
                     {hotel.amenities.map((amenity) => (
                       <div key={amenity} className="flex items-center bg-muted px-2 py-1 rounded text-xs">
                         {getAmenityIcon(amenity)}
                         <span className="ml-1 capitalize">{amenity}</span>
                       </div>
                     ))}
+                    {hotel.vegetarianFriendly && (
+                      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                        <Leaf className="h-3 w-3 mr-1" />
+                        Veg Friendly
+                      </Badge>
+                    )}
                   </div>
                   
                   <div className="flex flex-wrap justify-between items-center mt-auto pt-2 border-t">
                     <div>
                       <div className="flex items-baseline">
-                        <span className="text-2xl font-bold">${hotel.price}</span>
+                        <IndianRupee className="h-4 w-4 mr-1" />
+                        <span className="text-2xl font-bold">{hotel.price.toLocaleString()}</span>
                         <span className="text-sm ml-1">per night</span>
                       </div>
-                      <p className="text-xs text-muted-foreground">Taxes and fees included</p>
+                      <p className="text-xs text-muted-foreground">GST & fees included</p>
                     </div>
                     
                     <Button className="mt-2 sm:mt-0">

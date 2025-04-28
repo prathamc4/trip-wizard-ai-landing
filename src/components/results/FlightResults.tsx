@@ -4,54 +4,88 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { Plane, Heart, Clock, Calendar, ArrowRight } from 'lucide-react';
+import { Plane, Heart, Clock, Calendar, ArrowRight, Briefcase, IndianRupee } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
-// Sample flight data
+// Sample Indian flight data
 const flightData = [
   {
     id: 1,
-    airline: 'SkyWays Airlines',
-    flightNumber: 'SW 1234',
-    departureTime: '08:45 AM',
-    arrivalTime: '11:30 AM',
-    duration: '2h 45m',
-    departureAirport: 'JFK',
-    arrivalAirport: 'LAX',
-    price: 349,
+    airline: 'Air India',
+    flightNumber: 'AI 863',
+    departureTime: '06:15 AM',
+    arrivalTime: '08:35 AM',
+    duration: '2h 20m',
+    departureAirport: 'DEL',
+    departureCity: 'New Delhi',
+    arrivalAirport: 'BOM',
+    arrivalCity: 'Mumbai',
+    price: 4899,
     direct: true,
+    baggageAllowance: '25 kg',
+    amenities: ['Meal', 'Entertainment'],
     logo: 'https://images.unsplash.com/photo-1482938289607-e9573fc25ebb?fit=crop&w=40&h=40'
   },
   {
     id: 2,
-    airline: 'Global Air',
-    flightNumber: 'GA 5678',
-    departureTime: '11:15 AM',
-    arrivalTime: '02:25 PM',
-    duration: '3h 10m',
-    departureAirport: 'JFK',
-    arrivalAirport: 'LAX',
-    price: 289,
+    airline: 'IndiGo',
+    flightNumber: '6E 6174',
+    departureTime: '08:25 AM',
+    arrivalTime: '10:40 AM',
+    duration: '2h 15m',
+    departureAirport: 'DEL',
+    departureCity: 'New Delhi',
+    arrivalAirport: 'BOM',
+    arrivalCity: 'Mumbai',
+    price: 3750,
     direct: true,
+    baggageAllowance: '15 kg',
+    amenities: ['Paid Meal'],
     logo: 'https://images.unsplash.com/photo-1500375592092-40eb2168fd21?fit=crop&w=40&h=40'
   },
   {
     id: 3,
-    airline: 'Express Airways',
-    flightNumber: 'EA 9012',
-    departureTime: '02:30 PM',
-    arrivalTime: '06:15 PM',
-    duration: '3h 45m',
-    departureAirport: 'JFK',
-    arrivalAirport: 'LAX',
-    price: 399,
-    direct: false,
+    airline: 'Vistara',
+    flightNumber: 'UK 995',
+    departureTime: '11:30 AM',
+    arrivalTime: '13:55 PM',
+    duration: '2h 25m',
+    departureAirport: 'DEL',
+    departureCity: 'New Delhi',
+    arrivalAirport: 'BOM',
+    arrivalCity: 'Mumbai',
+    price: 5299,
+    direct: true,
+    baggageAllowance: '20 kg',
+    amenities: ['Premium Meal', 'Entertainment'],
     logo: 'https://images.unsplash.com/photo-1469041797191-50ace28483c3?fit=crop&w=40&h=40'
+  },
+  {
+    id: 4,
+    airline: 'SpiceJet',
+    flightNumber: 'SG 8169',
+    departureTime: '16:45 PM',
+    arrivalTime: '20:05 PM',
+    duration: '3h 20m',
+    departureAirport: 'DEL',
+    departureCity: 'New Delhi',
+    arrivalAirport: 'BOM',
+    arrivalCity: 'Mumbai',
+    price: 3499,
+    direct: false,
+    layoverAirport: 'AMD',
+    layoverCity: 'Ahmedabad',
+    layoverDuration: '45m',
+    baggageAllowance: '15 kg',
+    amenities: ['Paid Meal'],
+    logo: 'https://images.unsplash.com/photo-1518877593221-1f28583780b4?fit=crop&w=40&h=40'
   }
 ];
 
 const FlightResults: React.FC = () => {
   const [sortBy, setSortBy] = useState('price');
   const [filterDirect, setFilterDirect] = useState<string[]>(['all']);
+  const [filterAirline, setFilterAirline] = useState('all');
   const [savedFlights, setSavedFlights] = useState<number[]>([]);
 
   const handleSaveToggle = (flightId: number) => {
@@ -70,13 +104,23 @@ const FlightResults: React.FC = () => {
     return 0;
   });
 
-  // Filter flights based on selected option
+  // Filter flights based on selected options
   const filteredFlights = sortedFlights.filter(flight => {
-    if (filterDirect.includes('all')) return true;
-    if (filterDirect.includes('direct') && flight.direct) return true;
-    if (filterDirect.includes('connecting') && !flight.direct) return true;
-    return false;
+    // Filter by direct/connecting
+    if (!filterDirect.includes('all')) {
+      if (filterDirect.includes('direct') && !flight.direct) return false;
+      if (filterDirect.includes('connecting') && flight.direct) return false;
+    }
+    
+    // Filter by airline
+    if (filterAirline !== 'all' && flight.airline !== filterAirline) {
+      return false;
+    }
+    
+    return true;
   });
+
+  const airlines = ['all', ...new Set(flightData.map(flight => flight.airline))];
 
   return (
     <div className="space-y-6">
@@ -96,12 +140,28 @@ const FlightResults: React.FC = () => {
         </div>
         
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium">Filter:</span>
+          <span className="text-sm font-medium">Flight type:</span>
           <ToggleGroup type="multiple" value={filterDirect} onValueChange={setFilterDirect}>
             <ToggleGroupItem value="all">All</ToggleGroupItem>
             <ToggleGroupItem value="direct">Direct</ToggleGroupItem>
             <ToggleGroupItem value="connecting">Connecting</ToggleGroupItem>
           </ToggleGroup>
+        </div>
+        
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium">Airline:</span>
+          <Select value={filterAirline} onValueChange={setFilterAirline}>
+            <SelectTrigger className="w-36">
+              <SelectValue placeholder="All Airlines" />
+            </SelectTrigger>
+            <SelectContent>
+              {airlines.map((airline) => (
+                <SelectItem key={airline} value={airline}>
+                  {airline === 'all' ? 'All Airlines' : airline}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
       
@@ -145,6 +205,7 @@ const FlightResults: React.FC = () => {
                   <div className="text-right">
                     <p className="font-semibold text-lg">{flight.departureTime}</p>
                     <p className="text-xs text-muted-foreground">{flight.departureAirport}</p>
+                    <p className="text-xs text-muted-foreground">{flight.departureCity}</p>
                   </div>
                   
                   <div className="flex flex-col items-center">
@@ -154,18 +215,24 @@ const FlightResults: React.FC = () => {
                       <ArrowRight className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1 w-4 h-4 text-muted-foreground" />
                     </div>
                     <span className="text-xs text-muted-foreground mt-1.5">{flight.duration}</span>
+                    {!flight.direct && (
+                      <span className="text-xs text-amber-600">
+                        {flight.layoverCity} ({flight.layoverDuration})
+                      </span>
+                    )}
                   </div>
                   
                   <div>
                     <p className="font-semibold text-lg">{flight.arrivalTime}</p>
                     <p className="text-xs text-muted-foreground">{flight.arrivalAirport}</p>
+                    <p className="text-xs text-muted-foreground">{flight.arrivalCity}</p>
                   </div>
                 </div>
                 
                 <div className="flex justify-between items-center gap-4 w-full sm:w-auto">
                   <div className="flex items-baseline">
-                    <span className="text-2xl font-bold">${flight.price}</span>
-                    <span className="text-sm ml-1">USD</span>
+                    <IndianRupee className="h-4 w-4 mr-1" />
+                    <span className="text-2xl font-bold">{flight.price}</span>
                   </div>
                   
                   <Button className="ml-auto">
@@ -174,7 +241,7 @@ const FlightResults: React.FC = () => {
                 </div>
               </div>
               
-              <div className="px-4 py-2 text-xs flex gap-x-4">
+              <div className="px-4 py-2 text-xs flex flex-wrap gap-x-4 gap-y-2">
                 <div className="flex items-center gap-1">
                   <Clock className="h-3.5 w-3.5" />
                   {flight.direct ? 'Direct flight' : 'Has layover'}
@@ -182,6 +249,17 @@ const FlightResults: React.FC = () => {
                 <div className="flex items-center gap-1">
                   <Calendar className="h-3.5 w-3.5" />
                   May 15, 2025
+                </div>
+                <div className="flex items-center gap-1">
+                  <Briefcase className="h-3.5 w-3.5" />
+                  Baggage: {flight.baggageAllowance}
+                </div>
+                <div className="flex items-center gap-2">
+                  {flight.amenities.map((amenity, index) => (
+                    <Badge key={index} variant="outline" className="bg-white">
+                      {amenity}
+                    </Badge>
+                  ))}
                 </div>
               </div>
             </CardContent>
