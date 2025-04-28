@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Calendar } from '@/components/ui/calendar';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -8,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, Search, Loader, Airplane, Hotel, Map, Users } from 'lucide-react';
+import { CalendarIcon, Search, Loader, Map, Hotel, Users } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import SearchResults from '@/components/SearchResults';
@@ -22,7 +21,6 @@ const travelPreferences = [
 ];
 
 const TravelPlanningSection = () => {
-  // State variables for form inputs
   const [startLocation, setStartLocation] = useState('');
   const [destination, setDestination] = useState('');
   const [startDate, setStartDate] = useState<Date>();
@@ -34,7 +32,6 @@ const TravelPlanningSection = () => {
   const [showResults, setShowResults] = useState(false);
   const [activeTab, setActiveTab] = useState("flights");
 
-  // Handle checkbox changes
   const handleCheckboxChange = (value: string, checked: boolean) => {
     setPreferences(prev => {
       if (checked) {
@@ -44,19 +41,17 @@ const TravelPlanningSection = () => {
       }
     });
   };
-  
-  // Handle form submission
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     setIsSearching(true);
     
-    // Simulate API call delay
     setTimeout(() => {
       setIsSearching(false);
       setShowResults(true);
     }, 2000);
   };
-  
+
   return (
     <section id="plan" className="section bg-gradient-to-b from-white to-blue-50">
       <div className="container-custom py-16">
@@ -68,7 +63,6 @@ const TravelPlanningSection = () => {
           <div className="bg-white rounded-xl shadow-lg p-6 md:p-8 mb-8 bg-opacity-90 backdrop-blur-sm">
             <form onSubmit={handleSearch} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Starting Location */}
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Starting Location</label>
                   <Input 
@@ -81,7 +75,6 @@ const TravelPlanningSection = () => {
                   />
                 </div>
                 
-                {/* Destination */}
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Destination</label>
                   <Input 
@@ -93,8 +86,7 @@ const TravelPlanningSection = () => {
                     required
                   />
                 </div>
-              
-                {/* Start Date Picker */}
+                
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Start Date</label>
                   <Popover>
@@ -122,7 +114,6 @@ const TravelPlanningSection = () => {
                   </Popover>
                 </div>
                 
-                {/* End Date Picker */}
                 <div className="space-y-2">
                   <label className="text-sm font-medium">End Date</label>
                   <Popover>
@@ -151,7 +142,6 @@ const TravelPlanningSection = () => {
                 </div>
               </div>
               
-              {/* Budget Slider */}
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <label className="text-sm font-medium">Budget</label>
@@ -171,7 +161,6 @@ const TravelPlanningSection = () => {
                 </div>
               </div>
               
-              {/* Number of Travelers */}
               <div className="space-y-2">
                 <label className="text-sm font-medium">Number of Travelers</label>
                 <Select value={travelers} onValueChange={setTravelers}>
@@ -188,7 +177,6 @@ const TravelPlanningSection = () => {
                 </Select>
               </div>
               
-              {/* Trip Preferences */}
               <div className="space-y-3">
                 <label className="text-sm font-medium">Trip Preferences</label>
                 <div className="flex flex-wrap gap-4">
@@ -212,7 +200,6 @@ const TravelPlanningSection = () => {
                 </div>
               </div>
               
-              {/* Search Button */}
               <Button 
                 type="submit" 
                 className="w-full md:w-auto px-8 py-6 text-lg bg-travel-green hover:bg-travel-darkBlue"
@@ -233,13 +220,12 @@ const TravelPlanningSection = () => {
             </form>
           </div>
           
-          {/* Results Section */}
           {showResults && (
             <div className="bg-white rounded-xl shadow-lg p-6 animate-fade-in">
               <Tabs value={activeTab} onValueChange={setActiveTab}>
                 <TabsList className="grid grid-cols-4 mb-6">
                   <TabsTrigger value="flights" className="flex items-center">
-                    <Airplane className="mr-2 h-4 w-4" />
+                    <Map className="mr-2 h-4 w-4" />
                     <span>Flights</span>
                   </TabsTrigger>
                   <TabsTrigger value="hotels" className="flex items-center">
@@ -262,7 +248,6 @@ const TravelPlanningSection = () => {
           )}
         </div>
         
-        {/* Illustrations */}
         <div className="hidden lg:block absolute right-0 bottom-0 w-64 h-64 opacity-20 pointer-events-none">
           <img src="https://lovable.dev/wp-content/uploads/plane-travel-illustration.png" alt="Travel illustration" className="w-full h-full object-contain" />
         </div>
