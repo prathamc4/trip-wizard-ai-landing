@@ -1,80 +1,15 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Carousel, CarouselContent, CarouselItem, CarouselPrevious, CarouselNext } from '@/components/ui/carousel';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
-import { Star, Wifi, MapPin, Heart, Car, Coffee, Leaf, Fan, IndianRupee } from 'lucide-react';
+import { Star, Wifi, MapPin, Heart, Car, Coffee, Leaf, Fan, IndianRupee, Loader } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-
-// Sample Indian hotel data
-const hotelData = [
-  {
-    id: 1,
-    name: 'Taj Palace New Delhi',
-    rating: 5,
-    price: 12500,
-    address: 'Diplomatic Enclave, New Delhi',
-    amenities: ['wifi', 'parking', 'breakfast', 'ac', 'pool', 'gym'],
-    vegetarianFriendly: true,
-    distanceFromStation: '4.5 km from New Delhi Railway Station',
-    description: 'Luxury 5-star hotel with elegant rooms, multiple dining options, and excellent service.',
-    images: [
-      'https://images.unsplash.com/photo-1472396961693-142e6e269027?fit=crop&w=600&h=400',
-      'https://images.unsplash.com/photo-1482938289607-e9573fc25ebb?fit=crop&w=600&h=400',
-      'https://images.unsplash.com/photo-1500375592092-40eb2168fd21?fit=crop&w=600&h=400'
-    ]
-  },
-  {
-    id: 2,
-    name: 'OYO Townhouse 285',
-    rating: 3,
-    price: 2299,
-    address: 'Karol Bagh, New Delhi',
-    amenities: ['wifi', 'ac', 'breakfast'],
-    vegetarianFriendly: true,
-    distanceFromStation: '1.2 km from Karol Bagh Metro Station',
-    description: 'Budget-friendly hotel with clean rooms and essential amenities for travelers.',
-    images: [
-      'https://images.unsplash.com/photo-1500375592092-40eb2168fd21?fit=crop&w=600&h=400',
-      'https://images.unsplash.com/photo-1482938289607-e9573fc25ebb?fit=crop&w=600&h=400',
-      'https://images.unsplash.com/photo-1472396961693-142e6e269027?fit=crop&w=600&h=400'
-    ]
-  },
-  {
-    id: 3,
-    name: 'Leela Palace New Delhi',
-    rating: 5,
-    price: 18500,
-    address: 'Diplomatic Enclave, Chanakyapuri, New Delhi',
-    amenities: ['wifi', 'parking', 'breakfast', 'ac', 'pool', 'spa', 'gym'],
-    vegetarianFriendly: true,
-    distanceFromStation: '7 km from New Delhi Railway Station',
-    description: 'Opulent 5-star hotel with royal decor, world-class dining, and impeccable service.',
-    images: [
-      'https://images.unsplash.com/photo-1469041797191-50ace28483c3?fit=crop&w=600&h=400',
-      'https://images.unsplash.com/photo-1518877593221-1f28583780b4?fit=crop&w=600&h=400',
-      'https://images.unsplash.com/photo-1472396961693-142e6e269027?fit=crop&w=600&h=400'
-    ]
-  },
-  {
-    id: 4,
-    name: 'Hotel Aira Xing by Staybook',
-    rating: 3,
-    price: 1899,
-    address: 'Paharganj, New Delhi',
-    amenities: ['wifi', 'ac'],
-    vegetarianFriendly: true,
-    distanceFromStation: '0.5 km from New Delhi Railway Station',
-    description: 'Convenient budget hotel close to the railway station with basic amenities.',
-    images: [
-      'https://images.unsplash.com/photo-1518877593221-1f28583780b4?fit=crop&w=600&h=400',
-      'https://images.unsplash.com/photo-1469041797191-50ace28483c3?fit=crop&w=600&h=400',
-      'https://images.unsplash.com/photo-1472396961693-142e6e269027?fit=crop&w=600&h=400'
-    ]
-  }
-];
+import { fetchHotels, HotelResult } from '@/utils/api';
+import { toast } from 'sonner';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const HotelResults: React.FC = () => {
   const [priceRange, setPriceRange] = useState<number[]>([1000, 20000]);
@@ -82,6 +17,66 @@ const HotelResults: React.FC = () => {
   const [vegFilter, setVegFilter] = useState('all');
   const [acFilter, setAcFilter] = useState('all');
   const [savedHotels, setSavedHotels] = useState<number[]>([]);
+  const [hotels, setHotels] = useState<HotelResult[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadHotels = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Retrieve search params from session storage or use defaults
+        const searchData = sessionStorage.getItem('travelSearchData');
+        let destination = 'New Delhi';
+        let checkInDate = '2025-05-15';
+        let checkOutDate = '2025-05-18';
+
+        if (searchData) {
+          const parsedData = JSON.parse(searchData);
+          destination = parsedData.destination || destination;
+          
+          if (parsedData.startDate) {
+            const startDate = new Date(parsedData.startDate);
+            checkInDate = startDate.toISOString().split('T')[0];
+          }
+          
+          if (parsedData.endDate) {
+            const endDate = new Date(parsedData.endDate);
+            checkOutDate = endDate.toISOString().split('T')[0];
+          }
+        }
+
+        // Fetch hotels
+        const hotelResults = await fetchHotels({
+          destination,
+          checkInDate,
+          checkOutDate,
+          adults: 1,
+          currency: 'INR'
+        });
+
+        setHotels(hotelResults);
+        
+        // Update price range based on available hotels
+        if (hotelResults.length > 0) {
+          const prices = hotelResults.map(hotel => hotel.price);
+          const minPrice = Math.floor(Math.min(...prices) / 500) * 500; // Round to lower 500
+          const maxPrice = Math.ceil(Math.max(...prices) / 500) * 500;  // Round to upper 500
+          setPriceRange([minPrice, maxPrice]);
+        }
+      } catch (err) {
+        console.error('Error fetching hotels:', err);
+        setError('Failed to load hotel data. Please try again later.');
+        toast.error('Could not load hotel data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadHotels();
+  }, []);
 
   const handleSaveToggle = (hotelId: number) => {
     setSavedHotels(prev => 
@@ -89,10 +84,14 @@ const HotelResults: React.FC = () => {
         ? prev.filter(id => id !== hotelId)
         : [...prev, hotelId]
     );
+
+    if (!savedHotels.includes(hotelId)) {
+      toast.success('Hotel saved to favorites!');
+    }
   };
 
   // Filter hotels
-  const filteredHotels = hotelData.filter(hotel => {
+  const filteredHotels = hotels.filter(hotel => {
     const matchesPrice = hotel.price >= priceRange[0] && hotel.price <= priceRange[1];
     
     const matchesStars = starFilter === 'all' || 
@@ -149,6 +148,34 @@ const HotelResults: React.FC = () => {
     
     return stars;
   };
+
+  // Loading skeletons
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-wrap justify-between gap-4 mb-8">
+          <Skeleton className="h-16 w-64" />
+          <Skeleton className="h-10 w-44" />
+          <Skeleton className="h-10 w-44" />
+          <Skeleton className="h-10 w-44" />
+        </div>
+        
+        {[1, 2, 3].map((i) => (
+          <Skeleton key={i} className="h-72 w-full rounded-lg" />
+        ))}
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="p-8 text-center">
+        <p className="text-red-500 mb-4">{error}</p>
+        <Button onClick={() => window.location.reload()}>Try Again</Button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -216,103 +243,132 @@ const HotelResults: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6">
-        {filteredHotels.map((hotel) => (
-          <Card key={hotel.id} className="overflow-hidden hover:shadow-md transition-all duration-200">
-            <CardContent className="p-0">
-              <div className="grid md:grid-cols-3 gap-2">
-                {/* Hotel image carousel */}
-                <div className="md:col-span-1">
-                  <Carousel className="w-full">
-                    <CarouselContent>
-                      {hotel.images.map((image, index) => (
-                        <CarouselItem key={index}>
-                          <div className="h-52 md:h-full min-h-40 relative">
-                            <img 
-                              src={image} 
-                              alt={`${hotel.name} - image ${index+1}`}
-                              className="absolute inset-0 w-full h-full object-cover"
-                            />
-                          </div>
-                        </CarouselItem>
-                      ))}
-                    </CarouselContent>
-                    <CarouselPrevious className="left-2" />
-                    <CarouselNext className="right-2" />
-                  </Carousel>
-                </div>
-                
-                {/* Hotel details */}
-                <div className="p-4 md:col-span-2">
-                  <div className="flex justify-between mb-2">
-                    <h3 className="text-xl font-bold">{hotel.name}</h3>
-                    <Button 
-                      variant="ghost" 
-                      size="icon"
-                      onClick={() => handleSaveToggle(hotel.id)}
-                      className="relative"
-                    >
-                      <Heart className={`h-5 w-5 ${savedHotels.includes(hotel.id) ? 'fill-pink-500 text-pink-500' : ''}`} />
-                      {savedHotels.includes(hotel.id) && 
-                        <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-400 opacity-75"></span>
-                          <span className="relative inline-flex rounded-full h-3 w-3 bg-pink-500"></span>
-                        </span>
-                      }
-                    </Button>
+      {filteredHotels.length === 0 ? (
+        <div className="text-center py-8">
+          <p className="text-muted-foreground">No hotels match your current filters.</p>
+          <Button 
+            variant="outline" 
+            className="mt-4"
+            onClick={() => {
+              setStarFilter('all');
+              setVegFilter('all');
+              setAcFilter('all');
+              // Reset price range to initial values
+              const prices = hotels.map(hotel => hotel.price);
+              if (prices.length > 0) {
+                setPriceRange([
+                  Math.floor(Math.min(...prices) / 500) * 500,
+                  Math.ceil(Math.max(...prices) / 500) * 500
+                ]);
+              }
+            }}
+          >
+            Reset Filters
+          </Button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-6">
+          {filteredHotels.map((hotel) => (
+            <Card key={hotel.id} className="overflow-hidden hover:shadow-md transition-all duration-200">
+              <CardContent className="p-0">
+                <div className="grid md:grid-cols-3 gap-2">
+                  {/* Hotel image carousel */}
+                  <div className="md:col-span-1">
+                    <Carousel className="w-full">
+                      <CarouselContent>
+                        {hotel.images.map((image, index) => (
+                          <CarouselItem key={index}>
+                            <div className="h-52 md:h-full min-h-40 relative">
+                              <img 
+                                src={image} 
+                                alt={`${hotel.name} - image ${index+1}`}
+                                className="absolute inset-0 w-full h-full object-cover"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).onerror = null;
+                                  (e.target as HTMLImageElement).src = 'https://placehold.co/600x400/e2e8f0/a0aec0?text=Hotel+Image';
+                                }}
+                              />
+                            </div>
+                          </CarouselItem>
+                        ))}
+                      </CarouselContent>
+                      <CarouselPrevious className="left-2" />
+                      <CarouselNext className="right-2" />
+                    </Carousel>
                   </div>
+                  
+                  {/* Hotel details */}
+                  <div className="p-4 md:col-span-2">
+                    <div className="flex justify-between mb-2">
+                      <h3 className="text-xl font-bold">{hotel.name}</h3>
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={() => handleSaveToggle(hotel.id)}
+                        className="relative"
+                      >
+                        <Heart className={`h-5 w-5 ${savedHotels.includes(hotel.id) ? 'fill-pink-500 text-pink-500' : ''}`} />
+                        {savedHotels.includes(hotel.id) && 
+                          <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-3 w-3 bg-pink-500"></span>
+                          </span>
+                        }
+                      </Button>
+                    </div>
 
-                  <div className="flex mb-2">
-                    {renderStars(hotel.rating)}
-                    <span className="text-sm ml-2">{hotel.rating} stars</span>
-                  </div>
-                  
-                  <div className="flex items-center text-sm text-muted-foreground mb-3">
-                    <MapPin className="h-4 w-4 mr-1" />
-                    {hotel.address}
-                  </div>
-                  
-                  <div className="text-sm text-blue-600 mb-3">
-                    {hotel.distanceFromStation}
-                  </div>
-                  
-                  <p className="text-sm mb-4">{hotel.description}</p>
-                  
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    {hotel.amenities.map((amenity) => (
-                      <div key={amenity} className="flex items-center bg-muted px-2 py-1 rounded text-xs">
-                        {getAmenityIcon(amenity)}
-                        <span className="ml-1 capitalize">{amenity}</span>
-                      </div>
-                    ))}
-                    {hotel.vegetarianFriendly && (
-                      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                        <Leaf className="h-3 w-3 mr-1" />
-                        Veg Friendly
-                      </Badge>
-                    )}
-                  </div>
-                  
-                  <div className="flex flex-wrap justify-between items-center mt-auto pt-2 border-t">
-                    <div>
-                      <div className="flex items-baseline">
-                        <IndianRupee className="h-4 w-4 mr-1" />
-                        <span className="text-2xl font-bold">{hotel.price.toLocaleString()}</span>
-                        <span className="text-sm ml-1">per night</span>
-                      </div>
-                      <p className="text-xs text-muted-foreground">GST & fees included</p>
+                    <div className="flex mb-2">
+                      {renderStars(hotel.rating)}
+                      <span className="text-sm ml-2">{hotel.rating} stars</span>
                     </div>
                     
-                    <Button className="mt-2 sm:mt-0">
-                      Book Now
-                    </Button>
+                    <div className="flex items-center text-sm text-muted-foreground mb-3">
+                      <MapPin className="h-4 w-4 mr-1" />
+                      {hotel.address}
+                    </div>
+                    
+                    <div className="text-sm text-blue-600 mb-3">
+                      {hotel.distanceFromStation}
+                    </div>
+                    
+                    <p className="text-sm mb-4">{hotel.description}</p>
+                    
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {hotel.amenities.map((amenity) => (
+                        <div key={amenity} className="flex items-center bg-muted px-2 py-1 rounded text-xs">
+                          {getAmenityIcon(amenity)}
+                          <span className="ml-1 capitalize">{amenity}</span>
+                        </div>
+                      ))}
+                      {hotel.vegetarianFriendly && (
+                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                          <Leaf className="h-3 w-3 mr-1" />
+                          Veg Friendly
+                        </Badge>
+                      )}
+                    </div>
+                    
+                    <div className="flex flex-wrap justify-between items-center mt-auto pt-2 border-t">
+                      <div>
+                        <div className="flex items-baseline">
+                          <IndianRupee className="h-4 w-4 mr-1" />
+                          <span className="text-2xl font-bold">{hotel.price.toLocaleString()}</span>
+                          <span className="text-sm ml-1">per night</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground">GST & fees included</p>
+                      </div>
+                      
+                      <Button className="mt-2 sm:mt-0">
+                        Book Now
+                      </Button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

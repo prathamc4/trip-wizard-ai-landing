@@ -1,215 +1,69 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Pencil, Shuffle, Clock, MapPin, Bed, Coffee, Camera, Car, Plane, Building, IndianRupee, Utensils } from 'lucide-react';
+import { Pencil, Shuffle, Clock, MapPin, Bed, Coffee, Camera, Car, Plane, Building, IndianRupee, Utensils, Loader } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
-
-// Sample India-focused itinerary data
-const itineraryData = [
-  {
-    day: 1,
-    date: 'May 15, 2025',
-    activities: [
-      {
-        id: '1-1',
-        time: '08:15 AM',
-        type: 'transport',
-        title: 'Flight to New Delhi',
-        description: 'Air India (AI 863), Mumbai to New Delhi',
-        icon: 'plane',
-        cost: 4899,
-        notes: 'Terminal 3, Check-in 2 hours before departure'
-      },
-      {
-        id: '1-2',
-        time: '10:45 AM',
-        type: 'transport',
-        title: 'Airport Transfer',
-        description: 'Prepaid taxi from IGI Airport to hotel',
-        icon: 'car',
-        cost: 600,
-        notes: 'Prepaid taxi counter at airport arrival area'
-      },
-      {
-        id: '1-3',
-        time: '12:00 PM',
-        type: 'accommodation',
-        title: 'Hotel Check-in',
-        description: 'Taj Palace New Delhi, Deluxe Room',
-        icon: 'bed',
-        cost: 12500,
-        notes: 'Early check-in arranged'
-      },
-      {
-        id: '1-4',
-        time: '01:30 PM',
-        type: 'food',
-        title: 'Lunch at Bukhara',
-        description: 'Renowned North Indian restaurant with tandoori specialties',
-        icon: 'utensils',
-        cost: 3500,
-        notes: 'Vegetarian options available, casual elegant dress code'
-      },
-      {
-        id: '1-5',
-        time: '04:00 PM',
-        type: 'attraction',
-        title: 'Visit Qutub Minar',
-        description: 'UNESCO World Heritage site with 73m tall minaret',
-        icon: 'camera',
-        cost: 600,
-        notes: 'Entry fee: ₹600 for foreigners, ₹35 for Indians'
-      },
-      {
-        id: '1-6',
-        time: '07:30 PM',
-        type: 'food',
-        title: 'Dinner at Karim\'s',
-        description: 'Historic restaurant famous for Mughlai cuisine',
-        icon: 'utensils',
-        cost: 1200,
-        notes: 'Busy place, reservation recommended'
-      }
-    ]
-  },
-  {
-    day: 2,
-    date: 'May 16, 2025',
-    activities: [
-      {
-        id: '2-1',
-        time: '07:00 AM',
-        type: 'food',
-        title: 'Breakfast at hotel',
-        description: 'Buffet breakfast with Indian and continental options',
-        icon: 'utensils',
-        cost: 0,
-        notes: 'Included with stay'
-      },
-      {
-        id: '2-2',
-        time: '09:00 AM',
-        type: 'attraction',
-        title: 'Visit Red Fort',
-        description: 'Historic fort that served as the main residence of the Mughal Emperors',
-        icon: 'camera',
-        cost: 600,
-        notes: 'Entry fee: ₹600 for foreigners, ₹35 for Indians. Closed on Mondays.'
-      },
-      {
-        id: '2-3',
-        time: '12:30 PM',
-        type: 'food',
-        title: 'Lunch at Paranthe Wali Gali',
-        description: 'Famous lane in Old Delhi known for traditional stuffed parathas',
-        icon: 'utensils',
-        cost: 400,
-        notes: 'Street food experience, multiple small shops'
-      },
-      {
-        id: '2-4',
-        time: '02:30 PM',
-        type: 'attraction',
-        title: 'Visit India Gate & Rashtrapati Bhavan',
-        description: 'War memorial and Presidential Residence with changing of guard ceremony',
-        icon: 'camera',
-        cost: 0,
-        notes: 'Free entry, special pass needed for Rashtrapati Bhavan interior'
-      },
-      {
-        id: '2-5',
-        time: '06:00 PM',
-        type: 'attraction',
-        title: 'Visit Akshardham Temple',
-        description: 'Magnificent Hindu temple complex with evening water show',
-        icon: 'temple',
-        cost: 0,
-        notes: 'Free entry, ₹80 for water show. No cameras allowed inside.'
-      },
-      {
-        id: '2-6',
-        time: '08:30 PM',
-        type: 'food',
-        title: 'Dinner at Indian Accent',
-        description: 'Modern Indian cuisine at one of India\'s top restaurants',
-        icon: 'utensils',
-        cost: 4500,
-        notes: 'Fine dining, reservation essential'
-      }
-    ]
-  },
-  {
-    day: 3,
-    date: 'May 17, 2025',
-    activities: [
-      {
-        id: '3-1',
-        time: '07:00 AM',
-        type: 'food',
-        title: 'Breakfast at hotel',
-        description: 'Buffet breakfast with Indian and continental options',
-        icon: 'utensils',
-        cost: 0,
-        notes: 'Included with stay'
-      },
-      {
-        id: '3-2',
-        time: '09:00 AM',
-        type: 'attraction',
-        title: 'Visit Humayun\'s Tomb',
-        description: 'UNESCO World Heritage site and architectural inspiration for Taj Mahal',
-        icon: 'camera',
-        cost: 600,
-        notes: 'Entry fee: ₹600 for foreigners, ₹35 for Indians'
-      },
-      {
-        id: '3-3',
-        time: '12:00 PM',
-        type: 'food',
-        title: 'Lunch at Sagar Ratna',
-        description: 'Popular South Indian vegetarian restaurant',
-        icon: 'utensils',
-        cost: 800,
-        notes: 'Known for dosas, idlis and South Indian thalis'
-      },
-      {
-        id: '3-4',
-        time: '02:00 PM',
-        type: 'attraction',
-        title: 'Shopping at Dilli Haat',
-        description: 'Crafts bazaar featuring handcrafts from all over India',
-        icon: 'camera',
-        cost: 60,
-        notes: 'Entry fee: ₹60 for adults, bring cash for shopping'
-      },
-      {
-        id: '3-5',
-        time: '06:00 PM',
-        type: 'transport',
-        title: 'Return to hotel',
-        description: 'Taxi from Dilli Haat to Taj Palace Hotel',
-        icon: 'car',
-        cost: 300,
-        notes: 'Use Uber or Ola app for reliable service'
-      },
-      {
-        id: '3-6',
-        time: '07:30 PM',
-        type: 'food',
-        title: 'Farewell Dinner',
-        description: 'Authentic Punjabi dinner at Punjabi by Nature',
-        icon: 'utensils',
-        cost: 2500,
-        notes: 'Known for butter chicken and dal makhani'
-      }
-    ]
-  }
-];
+import { generateItinerary, ItineraryDay, Activity } from '@/utils/api';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const ItineraryResults: React.FC = () => {
-  const [itinerary, setItinerary] = useState(itineraryData);
+  const [itinerary, setItinerary] = useState<ItineraryDay[]>([]);
   const [languagePreference, setLanguagePreference] = useState("english");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadItinerary = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Retrieve search params from session storage or use defaults
+        const searchData = sessionStorage.getItem('travelSearchData');
+        let destination = 'New Delhi';
+        let startDate = '2025-05-15';
+        let endDate = '2025-05-18';
+        let preferences: string[] = [];
+
+        if (searchData) {
+          const parsedData = JSON.parse(searchData);
+          destination = parsedData.destination || destination;
+          
+          if (parsedData.startDate) {
+            const start = new Date(parsedData.startDate);
+            startDate = start.toISOString().split('T')[0];
+          }
+          
+          if (parsedData.endDate) {
+            const end = new Date(parsedData.endDate);
+            endDate = end.toISOString().split('T')[0];
+          }
+          
+          if (parsedData.preferences && Array.isArray(parsedData.preferences)) {
+            preferences = parsedData.preferences;
+          }
+        }
+
+        // Generate itinerary
+        const itineraryResponse = await generateItinerary({
+          destination,
+          startDate,
+          endDate,
+          preferences
+        });
+
+        setItinerary(itineraryResponse.days);
+      } catch (err) {
+        console.error('Error generating itinerary:', err);
+        setError('Failed to generate itinerary. Please try again later.');
+        toast.error('Could not generate itinerary');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadItinerary();
+  }, []);
 
   const getActivityIcon = (iconName: string) => {
     switch(iconName) {
@@ -284,6 +138,70 @@ const ItineraryResults: React.FC = () => {
   };
 
   const toggleLanguageText = languagePreference === "english" ? "हिंदी में देखें" : "View in English";
+  
+  const handleShareViaWhatsApp = () => {
+    // Create a simplified text version of the itinerary
+    let itineraryText = "📅 *My India Travel Itinerary* 📅\n\n";
+    
+    itinerary.forEach(day => {
+      itineraryText += `*Day ${day.day} - ${day.date}*\n`;
+      day.activities.forEach(activity => {
+        itineraryText += `• ${activity.time} - ${activity.title}\n`;
+      });
+      itineraryText += '\n';
+    });
+    
+    itineraryText += "🧳 *Generated with AI Travel Planner* 🧳";
+    
+    // Encode for WhatsApp
+    const encodedText = encodeURIComponent(itineraryText);
+    const whatsappUrl = `https://wa.me/?text=${encodedText}`;
+    
+    // Open in new tab
+    window.open(whatsappUrl, '_blank');
+    toast.success('Opening WhatsApp sharing...');
+  };
+
+  // Loading skeletons
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-wrap justify-between items-center gap-y-3 mb-4">
+          <div>
+            <Skeleton className="h-7 w-48 mb-2" />
+            <Skeleton className="h-5 w-32" />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Skeleton className="h-9 w-32" />
+            <Skeleton className="h-9 w-32" />
+          </div>
+        </div>
+
+        <Skeleton className="h-20 w-full mb-6" />
+        
+        {[1, 2, 3].map(i => (
+          <div key={i} className="space-y-3 mb-8">
+            <Skeleton className="h-8 w-32 mb-2" />
+            <div className="space-y-4">
+              {[1, 2, 3, 4].map(j => (
+                <Skeleton key={j} className="h-32 w-full" />
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="p-8 text-center">
+        <p className="text-red-500 mb-4">{error}</p>
+        <Button onClick={() => window.location.reload()}>Try Again</Button>
+      </div>
+    );
+  }
 
   // Calculate total cost
   const totalCost = itinerary.reduce((total, day) => {
@@ -294,12 +212,19 @@ const ItineraryResults: React.FC = () => {
     <div className="space-y-6">
       <div className="flex flex-wrap justify-between items-center gap-y-3">
         <div>
-          <h3 className="text-xl font-semibold">3-Day Delhi Exploration</h3>
-          <p className="text-sm text-muted-foreground">May 15 - 17, 2025</p>
+          <h3 className="text-xl font-semibold">{itinerary.length}-Day {itinerary.length > 0 && itinerary[0].date ? new Date(itinerary[0].date).toLocaleString('en-US', { month: 'short' }) : ''} Exploration</h3>
+          <p className="text-sm text-muted-foreground">
+            {itinerary.length > 0 ? 
+              `${itinerary[0].date} - ${itinerary[itinerary.length-1].date}` : 
+              "Custom Itinerary"}
+          </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={handleLanguageToggle}>
             {toggleLanguageText}
+          </Button>
+          <Button variant="outline" onClick={handleShareViaWhatsApp}>
+            Share via WhatsApp
           </Button>
           <Button variant="outline" onClick={handlePrintItinerary}>
             Print Itinerary
