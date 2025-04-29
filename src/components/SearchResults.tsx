@@ -28,7 +28,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ activeTab }) => {
       </div>
       
       <div className="mb-6 space-y-3">
-        <Alert variant="warning" className="bg-amber-50">
+        <Alert variant="default" className="bg-amber-50 border-amber-200">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Travel Advisory</AlertTitle>
           <AlertDescription>

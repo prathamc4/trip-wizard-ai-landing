@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Pencil, Shuffle, Clock, MapPin, Bed, Coffee, Camera, Car, Plane, Temple, IndianRupee, Utensils } from 'lucide-react';
+import { Pencil, Shuffle, Clock, MapPin, Bed, Coffee, Camera, Car, Plane, Building, IndianRupee, Utensils } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 
@@ -218,7 +218,7 @@ const ItineraryResults: React.FC = () => {
       case 'bed': return <Bed className="h-5 w-5" />;
       case 'camera': return <Camera className="h-5 w-5" />;
       case 'utensils': return <Utensils className="h-5 w-5" />;
-      case 'temple': return <Temple className="h-5 w-5" />;
+      case 'temple': return <Building className="h-5 w-5" />; // Changed from Temple to Building
       default: return <MapPin className="h-5 w-5" />;
     }
   };
