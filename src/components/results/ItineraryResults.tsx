@@ -44,7 +44,7 @@ const ItineraryResults: React.FC = () => {
           }
         }
 
-        // Generate itinerary
+        // Generate itinerary with proper API key reference
         const itineraryResponse = await generateItinerary({
           destination,
           startDate,
@@ -72,7 +72,7 @@ const ItineraryResults: React.FC = () => {
       case 'bed': return <Bed className="h-5 w-5" />;
       case 'camera': return <Camera className="h-5 w-5" />;
       case 'utensils': return <Utensils className="h-5 w-5" />;
-      case 'temple': return <Building className="h-5 w-5" />; // Changed from Temple to Building
+      case 'temple': return <Building className="h-5 w-5" />;
       default: return <MapPin className="h-5 w-5" />;
     }
   };

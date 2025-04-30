@@ -1,3 +1,4 @@
+
 import { toast } from 'sonner';
 import { FlightResult } from './flightAPI';
 import { HotelResult } from './hotelAPI';
@@ -54,14 +55,14 @@ export const generateItinerary = async (request: ItineraryRequest): Promise<Itin
   }
 
   try {
-    // Google Gemini API endpoint
-    const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.0-pro:generateContent';
+    // Updated Gemini API endpoint
+    const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
     
     // Generate itinerary request prompt
     const prompt = generateGeminiPrompt(request);
 
     // Make API call to Gemini with the provided API key
-    const response = await fetch(`${url}?key=${import.meta.env.VITE_GEMINI_API_KEY || 'AIzaSyCb6olJssZxo1FruGRjdRFjCBLeoyezAlc'}`, {
+    const response = await fetch(`${url}?key=${import.meta.env.VITE_GEMINI_API_KEY}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
