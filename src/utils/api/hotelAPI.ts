@@ -1,4 +1,3 @@
-
 import { toast } from 'sonner';
 
 export interface HotelSearchParams {
@@ -37,28 +36,28 @@ export const fetchHotels = async (params: HotelSearchParams): Promise<HotelResul
   }
 
   try {
-    // RapidAPI endpoint for Hotels
-    const url = `https://hotels-com-provider.p.rapidapi.com/v2/hotels/search`;
+    // SerpAPI endpoint for Google Hotels
+    const url = `https://serpapi.com/search`;
     
+    // Prepare query parameters
     const queryParams = new URLSearchParams({
-      destination_id: getDestinationId(params.destination),
-      checkout_date: params.checkOutDate,
-      checkin_date: params.checkInDate,
-      sort_order: "PRICE_LOW_TO_HIGH",
-      adults_number: (params.adults || 1).toString(),
-      locale: "en_IN",
-      currency: params.currency || "INR",
-      region_id: "IN",
+      engine: 'google_hotels',
+      q: `hotels in ${params.destination}`,
+      currency: params.currency || 'INR',
+      check_in_date: params.checkInDate,
+      check_out_date: params.checkOutDate,
+      api_key: import.meta.env.VITE_SERPAPI_KEY || ''
     });
+    
+    // Add adults if provided
+    if (params.adults && params.adults > 1) {
+      queryParams.append('num_adults', params.adults.toString());
+    }
 
-    // Make API call
-    const response = await fetch(`${url}?${queryParams.toString()}`, {
-      method: 'GET',
-      headers: {
-        'X-RapidAPI-Key': import.meta.env.VITE_RAPIDAPI_KEY || '',
-        'X-RapidAPI-Host': 'hotels-com-provider.p.rapidapi.com'
-      }
-    });
+    // Make API call with a small delay to avoid rate limiting
+    await new Promise(resolve => setTimeout(resolve, 700));
+    
+    const response = await fetch(`${url}?${queryParams.toString()}`);
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -76,7 +75,7 @@ export const fetchHotels = async (params: HotelSearchParams): Promise<HotelResul
     const data = await response.json();
     
     // Transform API response to our HotelResult interface
-    const results: HotelResult[] = transformHotelsResponse(data);
+    const results: HotelResult[] = transformSerpAPIHotelResponse(data, params);
     
     // Cache the results
     cache[cacheKey] = { data: results, timestamp: now };
@@ -95,85 +94,111 @@ export const fetchHotels = async (params: HotelSearchParams): Promise<HotelResul
   }
 };
 
-function getDestinationId(destination: string): string {
-  // Mapping of common Indian cities to their destination IDs
-  const destinationMap: Record<string, string> = {
-    'delhi': '1635932',
-    'new delhi': '1635932',
-    'mumbai': '1640715',
-    'bangalore': '1636987',
-    'chennai': '1636967',
-    'kolkata': '1637162',
-    'jaipur': '1637842',
-    'hyderabad': '1636947',
-    'goa': '1636078',
-    'agra': '1635568',
-  };
-
-  return destinationMap[destination.toLowerCase()] || '1635932'; // default to Delhi if not found
-}
-
-// Transform Hotels.com API response to our format
-function transformHotelsResponse(apiResponse: any): HotelResult[] {
+// Transform SerpAPI Google Hotels response to our format
+function transformSerpAPIHotelResponse(apiResponse: any, params: HotelSearchParams): HotelResult[] {
   try {
-    if (!apiResponse.properties || !Array.isArray(apiResponse.properties)) {
-      throw new Error('Unexpected API response format');
+    // Check if we have hotel results
+    if (!apiResponse.hotels_results || !apiResponse.hotels_results.length) {
+      throw new Error('No hotel results found in SerpAPI response');
     }
-
-    return apiResponse.properties.slice(0, 10).map((hotel: any, index: number) => {
-      const priceDetails = hotel.price || {};
-      
+    
+    const hotels = apiResponse.hotels_results;
+    
+    return hotels.slice(0, 10).map((hotel: any, index: number) => {
       // Extract images
-      const images = hotel.propertyImage ? 
-        [hotel.propertyImage.image.url] : 
-        [`https://images.unsplash.com/photo-1472396961693-142e6e269027?fit=crop&w=600&h=400`];
+      const images = [];
+      if (hotel.thumbnail) {
+        images.push(hotel.thumbnail);
+      }
       
-      // Add additional images if available
-      if (hotel.galleryImages && Array.isArray(hotel.galleryImages)) {
-        hotel.galleryImages.slice(0, 2).forEach((img: any) => {
-          if (img.image && img.image.url) {
-            images.push(img.image.url);
+      if (hotel.photos && hotel.photos.length > 0) {
+        hotel.photos.slice(0, 4).forEach((photo: any) => {
+          if (photo.image) {
+            images.push(photo.image);
           }
         });
       }
       
-      // Generate random amenities as API might not provide them
-      const hasAC = Math.random() > 0.2;
-      const hasWifi = Math.random() > 0.1;
-      const hasBreakfast = Math.random() > 0.5;
-      const hasParking = Math.random() > 0.6;
-      const hasPool = hotel.star >= 4 && Math.random() > 0.5;
-      const hasGym = hotel.star >= 4 && Math.random() > 0.6;
+      // If no images are available, use placeholder
+      if (images.length === 0) {
+        images.push('https://images.unsplash.com/photo-1472396961693-142e6e269027?fit=crop&w=600&h=400');
+      }
       
-      const amenities = [];
-      if (hasWifi) amenities.push('wifi');
-      if (hasParking) amenities.push('parking');
-      if (hasBreakfast) amenities.push('breakfast');
-      if (hasAC) amenities.push('ac');
-      if (hasPool) amenities.push('pool');
-      if (hasGym) amenities.push('gym');
+      // Extract and normalize amenities
+      const hotelAmenities = [];
+      if (hotel.amenities) {
+        if (hotel.amenities.includes('Free Wi-Fi') || hotel.amenities.includes('Wi-Fi')) {
+          hotelAmenities.push('wifi');
+        }
+        if (hotel.amenities.includes('Parking') || hotel.amenities.includes('Free parking')) {
+          hotelAmenities.push('parking');
+        }
+        if (hotel.amenities.includes('Restaurant') || hotel.amenities.includes('Breakfast')) {
+          hotelAmenities.push('breakfast');
+        }
+        if (hotel.amenities.includes('Air conditioning')) {
+          hotelAmenities.push('ac');
+        }
+        if (hotel.amenities.includes('Pool') || hotel.amenities.includes('Swimming pool')) {
+          hotelAmenities.push('pool');
+        }
+        if (hotel.amenities.includes('Gym') || hotel.amenities.includes('Fitness center')) {
+          hotelAmenities.push('gym');
+        }
+      }
       
-      // Generate a random vegetarian friendliness status (more likely in India)
-      const isVegFriendly = Math.random() > 0.3;
+      // Ensure we have at least some amenities
+      if (hotelAmenities.length === 0) {
+        const hasAC = Math.random() > 0.2;
+        const hasWifi = Math.random() > 0.1;
+        
+        if (hasWifi) hotelAmenities.push('wifi');
+        if (hasAC) hotelAmenities.push('ac');
+      }
       
-      // Calculate distance from nearest station (simulated)
-      const distanceKm = (Math.random() * 6 + 0.5).toFixed(1);
+      // Determine vegetarian-friendliness
+      const isVegFriendly = hotel.amenities?.includes('Vegetarian meals') || 
+                           hotel.description?.toLowerCase().includes('vegetarian') || 
+                           Math.random() > 0.3; // More likely in India
+      
+      // Calculate or estimate distance from nearest station
+      const distanceKm = hotel.distance_from_center ? 
+                         parseFloat(hotel.distance_from_center.replace(/[^\d.]/g, '')) : 
+                         (Math.random() * 6 + 0.5).toFixed(1);
+                         
       const stationType = Math.random() > 0.5 ? "Railway Station" : "Metro Station";
       const nearestStation = `${distanceKm} km from nearest ${stationType}`;
+      
+      // Extract or generate description
+      const description = hotel.description || 
+                        hotel.overview || 
+                        `${hotel.name} offers comfortable accommodation in ${params.destination} with modern amenities and excellent service.`;
+
+      // Determine rating (out of 5)
+      let rating = hotel.rating || 0;
+      if (typeof rating === 'string') {
+        rating = parseFloat(rating);
+      }
+      // If rating is out of 10, convert to out of 5
+      if (rating > 5) {
+        rating = rating / 2;
+      }
+      // If no rating, generate a realistic one
+      if (!rating) {
+        rating = Math.floor(Math.random() * 2) + 3;
+      }
 
       return {
         id: index + 1,
         name: hotel.name || `Hotel ${index + 1}`,
-        rating: hotel.star || Math.floor(Math.random() * 2) + 3,
-        price: priceDetails.lead?.amount || 2000 + Math.floor(Math.random() * 20000),
-        address: hotel.neighborhood?.name || hotel.destinationInfo?.distanceFromDestination?.value || "Central Location",
-        amenities: amenities,
+        rating: rating,
+        price: hotel.price || 2000 + Math.floor(Math.random() * 20000),
+        address: hotel.address || `${params.destination}, India`,
+        amenities: hotelAmenities,
         vegetarianFriendly: isVegFriendly,
         distanceFromStation: nearestStation,
-        description: hotel.propertyDescription || "Comfortable accommodation with modern amenities and excellent service.",
-        images: images.length > 0 ? images : [
-          `https://images.unsplash.com/photo-1472396961693-142e6e269027?fit=crop&w=600&h=400`
-        ]
+        description: description,
+        images: images
       };
     });
   } catch (error) {
@@ -182,7 +207,7 @@ function transformHotelsResponse(apiResponse: any): HotelResult[] {
   }
 }
 
-// Sample data as fallback
+// Sample data as fallback - keeping the same structure
 function getSampleHotelData(): HotelResult[] {
   return [
     {

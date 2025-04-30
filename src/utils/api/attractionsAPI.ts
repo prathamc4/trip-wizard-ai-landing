@@ -1,4 +1,3 @@
-
 import { toast } from 'sonner';
 
 export interface AttractionSearchParams {
@@ -52,7 +51,7 @@ export const fetchAttractions = async (params: AttractionSearchParams): Promise<
     // Get coordinates for the selected destination
     const coordinates = cityCoordinates[params.destination.toLowerCase()] || cityCoordinates['delhi'];
     
-    // OpenTripMap API endpoint
+    // OpenTripMap API endpoint with provided API key
     const url = `https://api.opentripmap.com/0.1/en/places/radius`;
     
     const queryParams = new URLSearchParams({
@@ -62,7 +61,7 @@ export const fetchAttractions = async (params: AttractionSearchParams): Promise<
       rate: '3', // Minimum rating
       format: 'json',
       limit: '20',
-      apikey: import.meta.env.VITE_OPENTRIPMAP_KEY || ''
+      apikey: import.meta.env.VITE_OPENTRIPMAP_KEY || '5ae2e3f221c38a28845f05b6cdbd5523a98e8a182f13e2bf12a1f5a5'
     });
 
     // Add category filter if provided
@@ -70,7 +69,9 @@ export const fetchAttractions = async (params: AttractionSearchParams): Promise<
       queryParams.append('kinds', mapCategoryToOpenTripMapKind(params.category));
     }
 
-    // Make API call
+    // Make API call with a small delay to avoid rate limiting
+    await new Promise(resolve => setTimeout(resolve, 800));
+    
     const response = await fetch(`${url}?${queryParams.toString()}`);
 
     if (!response.ok) {
@@ -90,9 +91,12 @@ export const fetchAttractions = async (params: AttractionSearchParams): Promise<
     
     // Fetch details for each attraction
     const detailedAttractions = await Promise.all(
-      data.slice(0, 8).map(async (place: any) => {
+      data.slice(0, 8).map(async (place: any, index: number) => {
         try {
-          const detailsUrl = `https://api.opentripmap.com/0.1/en/places/xid/${place.xid}?apikey=${import.meta.env.VITE_OPENTRIPMAP_KEY || ''}`;
+          // Add a small delay between requests to avoid rate limiting
+          await new Promise(resolve => setTimeout(resolve, 200 * index));
+          
+          const detailsUrl = `https://api.opentripmap.com/0.1/en/places/xid/${place.xid}?apikey=${import.meta.env.VITE_OPENTRIPMAP_KEY || '5ae2e3f221c38a28845f05b6cdbd5523a98e8a182f13e2bf12a1f5a5'}`;
           const detailsResponse = await fetch(detailsUrl);
           
           if (!detailsResponse.ok) {

@@ -1,4 +1,3 @@
-
 import { toast } from 'sonner';
 import { FlightResult } from './flightAPI';
 import { HotelResult } from './hotelAPI';
@@ -55,34 +54,35 @@ export const generateItinerary = async (request: ItineraryRequest): Promise<Itin
   }
 
   try {
-    // OpenAI API endpoint for itinerary generation
-    const url = 'https://api.openai.com/v1/chat/completions';
-
+    // Google Gemini API endpoint
+    const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.0-pro:generateContent';
+    
     // Generate itinerary request prompt
-    const prompt = generateAIPrompt(request);
+    const prompt = generateGeminiPrompt(request);
 
-    // Make API call to OpenAI
-    const response = await fetch(url, {
+    // Make API call to Gemini with the provided API key
+    const response = await fetch(`${url}?key=${import.meta.env.VITE_GEMINI_API_KEY || 'AIzaSyCb6olJssZxo1FruGRjdRFjCBLeoyezAlc'}`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${import.meta.env.VITE_OPENAI_API_KEY || ''}`
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [
+        contents: [
           {
-            role: "system",
-            content: "You are an expert Indian travel planner with deep knowledge of local customs, festivals, and attractions. Create detailed itineraries that respect cultural norms, religious practices, and incorporate authentic experiences."
-          },
-          {
-            role: "user",
-            content: prompt
+            parts: [
+              {
+                text: prompt
+              }
+            ]
           }
         ],
-        temperature: 0.7,
-        max_tokens: 2000,
-        response_format: { type: "json_object" }
+        generationConfig: {
+          temperature: 0.7,
+          topK: 32,
+          topP: 1,
+          maxOutputTokens: 4096,
+          responseMimeType: "application/json"
+        }
       })
     });
 
@@ -92,7 +92,7 @@ export const generateItinerary = async (request: ItineraryRequest): Promise<Itin
       
       // Fall back to sample data if API fails
       const fallbackData = getSampleItinerary(request);
-      toast.error("Could not connect to AI for itinerary generation. Using sample itinerary.");
+      toast.error("Could not connect to Gemini API for itinerary generation. Using sample itinerary.");
       
       // Cache the fallback data
       cache[cacheKey] = { data: fallbackData, timestamp: now };
@@ -103,17 +103,36 @@ export const generateItinerary = async (request: ItineraryRequest): Promise<Itin
     
     let itineraryData: ItineraryResponse;
     try {
-      // Parse the completion from OpenAI
-      const jsonResponse = JSON.parse(data.choices[0].message.content);
+      // Extract the JSON response from Gemini's text response
+      let jsonText = '';
+      
+      // Look for the response text in the Gemini API response structure
+      if (data.candidates && data.candidates.length > 0 && 
+          data.candidates[0].content && 
+          data.candidates[0].content.parts && 
+          data.candidates[0].content.parts.length > 0) {
+          
+        jsonText = data.candidates[0].content.parts[0].text;
+        
+        // Try to extract JSON if it's wrapped in markdown code blocks
+        if (jsonText.includes('```json')) {
+          jsonText = jsonText.split('```json')[1].split('```')[0].trim();
+        } else if (jsonText.includes('```')) {
+          jsonText = jsonText.split('```')[1].split('```')[0].trim();
+        }
+      }
+      
+      // Parse the JSON response
+      const jsonResponse = JSON.parse(jsonText);
       
       // Validate and transform to our format
-      itineraryData = transformAIResponse(jsonResponse, request);
+      itineraryData = transformGeminiResponse(jsonResponse, request);
     } catch (parseError) {
-      console.error('Error parsing AI response:', parseError);
+      console.error('Error parsing Gemini response:', parseError);
       
       // Fall back to sample data if parsing fails
       itineraryData = getSampleItinerary(request);
-      toast.error("Could not process AI response. Using sample itinerary.");
+      toast.error("Could not process Gemini API response. Using sample itinerary.");
     }
     
     // Cache the results
@@ -133,8 +152,8 @@ export const generateItinerary = async (request: ItineraryRequest): Promise<Itin
   }
 };
 
-// Generate comprehensive prompt for AI
-function generateAIPrompt(request: ItineraryRequest): string {
+// Generate comprehensive prompt for Gemini API
+function generateGeminiPrompt(request: ItineraryRequest): string {
   // Calculate number of days
   const start = new Date(request.startDate);
   const end = new Date(request.endDate);
@@ -184,7 +203,7 @@ function generateAIPrompt(request: ItineraryRequest): string {
   - Cost estimates in INR
   - Special notes (dress code, cultural considerations, etc.)
   
-  Format your response as a JSON object with the structure:
+  Return your response ONLY as a valid JSON object with the structure:
   {
     "days": [
       {
@@ -204,11 +223,13 @@ function generateAIPrompt(request: ItineraryRequest): string {
         ]
       }
     ]
-  }`;
+  }
+
+  Do not include any explanatory text before or after the JSON. Only return the JSON object itself.`;
 }
 
-// Transform AI response to our format
-function transformAIResponse(aiResponse: any, request: ItineraryRequest): ItineraryResponse {
+// Transform Gemini API response to our format
+function transformGeminiResponse(aiResponse: any, request: ItineraryRequest): ItineraryResponse {
   try {
     if (!aiResponse.days || !Array.isArray(aiResponse.days)) {
       throw new Error('Invalid AI response format');
@@ -252,7 +273,7 @@ function transformAIResponse(aiResponse: any, request: ItineraryRequest): Itiner
     
     return { days: processedDays };
   } catch (error) {
-    console.error('Error transforming AI response:', error);
+    console.error('Error transforming Gemini response:', error);
     return getSampleItinerary(request);
   }
 }
@@ -269,13 +290,13 @@ function mapActivityTypeToIcon(type: string): string {
     case 'attraction':
       return 'camera';
     case 'religious':
-      return 'temple';
+      return 'building'; // Changed from 'temple' to 'building' as Temple is not available
     default:
       return 'camera';
   }
 }
 
-// Sample data as fallback
+// Sample data as fallback - keeping the same sample data structure
 function getSampleItinerary(request: ItineraryRequest): ItineraryResponse {
   // Calculate number of days
   const start = new Date(request.startDate);
@@ -305,7 +326,7 @@ function getSampleItinerary(request: ItineraryRequest): ItineraryResponse {
   return { days };
 }
 
-// Generate sample activities for a day
+// Generate sample activities for a day - kept the same
 function generateSampleActivities(day: number, destination: string): Activity[] {
   if (day === 1) {
     return [
@@ -418,7 +439,7 @@ function generateSampleActivities(day: number, destination: string): Activity[] 
         type: 'attraction',
         title: 'Evening Performance',
         description: 'Traditional dance or music performance',
-        icon: 'temple',
+        icon: 'building',
         cost: 800,
         notes: 'Shows run for approximately 2 hours'
       },

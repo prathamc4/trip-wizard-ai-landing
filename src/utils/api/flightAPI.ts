@@ -1,4 +1,3 @@
-
 import { toast } from 'sonner';
 
 export interface FlightSearchParams {
@@ -46,41 +45,34 @@ export const fetchFlights = async (params: FlightSearchParams): Promise<FlightRe
   }
 
   try {
-    // RapidAPI endpoint for Skyscanner
-    const url = `https://skyscanner-api.p.rapidapi.com/v3/flights/live/search/create`;
+    // SerpAPI endpoint for Google Flights
+    const url = `https://serpapi.com/search`;
     
-    const requestBody = {
-      query: {
-        market: "IN",
-        locale: "en-IN",
-        currency: params.currency || "INR",
-        queryLegs: [
-          {
-            originPlaceId: { iata: params.origin },
-            destinationPlaceId: { iata: params.destination },
-            date: {
-              year: parseInt(params.departureDate.split('-')[0]),
-              month: parseInt(params.departureDate.split('-')[1]),
-              day: parseInt(params.departureDate.split('-')[2])
-            }
-          }
-        ],
-        cabinClass: "CABIN_CLASS_ECONOMY",
-        adults: params.adults || 1,
-        childrenAges: []
-      }
-    };
-
-    // Make API call
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'X-RapidAPI-Key': import.meta.env.VITE_RAPIDAPI_KEY || '',
-        'X-RapidAPI-Host': 'skyscanner-api.p.rapidapi.com',
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(requestBody)
+    // Prepare query parameters
+    const queryParams = new URLSearchParams({
+      engine: 'google_flights',
+      departure_id: params.origin,
+      arrival_id: params.destination,
+      outbound_date: params.departureDate,
+      currency: params.currency || 'INR',
+      type: '2',
+      api_key: import.meta.env.VITE_SERPAPI_KEY || ''
     });
+    
+    // Add return date if provided
+    if (params.returnDate) {
+      queryParams.append('return_date', params.returnDate);
+    }
+    
+    // Add adults if provided
+    if (params.adults && params.adults > 1) {
+      queryParams.append('adult', params.adults.toString());
+    }
+
+    // Make API call with a small delay to avoid rate limiting
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    const response = await fetch(`${url}?${queryParams.toString()}`);
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -98,7 +90,7 @@ export const fetchFlights = async (params: FlightSearchParams): Promise<FlightRe
     const data = await response.json();
     
     // Transform API response to our FlightResult interface
-    const results: FlightResult[] = transformSkyscannerResponse(data, params);
+    const results: FlightResult[] = transformSerpAPIResponse(data, params);
     
     // Cache the results
     cache[cacheKey] = { data: results, timestamp: now };
@@ -117,79 +109,59 @@ export const fetchFlights = async (params: FlightSearchParams): Promise<FlightRe
   }
 };
 
-// Transform Skyscanner API response to our format
-function transformSkyscannerResponse(apiResponse: any, params: FlightSearchParams): FlightResult[] {
+// Transform SerpAPI Google Flights response to our format
+function transformSerpAPIResponse(apiResponse: any, params: FlightSearchParams): FlightResult[] {
   try {
-    if (!apiResponse.content || !apiResponse.content.results || !apiResponse.content.results.itineraries) {
-      throw new Error('Unexpected API response format');
+    // Check if we have flight results
+    if (!apiResponse.flights_results || !apiResponse.flights_results.length) {
+      throw new Error('No flight results found in SerpAPI response');
     }
 
-    const { itineraries, legs, carriers, places } = apiResponse.content.results;
+    const flights = apiResponse.flights_results;
     
-    return Object.values(itineraries).slice(0, 10).map((itin: any) => {
-      const legId = itin.legIds[0];
-      const leg = legs[legId];
-      const carrierId = leg.operatingCarrierIds[0];
-      const carrier = carriers[carrierId];
+    return flights.slice(0, 10).map((flight: any, index: number) => {
+      // Extract departure and arrival information
+      const departureInfo = flight.departure_airport || {};
+      const arrivalInfo = flight.arrival_airport || {};
       
-      const originId = leg.originPlaceId;
-      const destinationId = leg.destinationPlaceId;
-      const origin = places[originId];
-      const destination = places[destinationId];
-
-      const isDirect = !leg.stopCount;
+      // Extract layover information if exists
+      const hasLayover = flight.layovers && flight.layovers.length > 0;
       let layoverInfo = null;
       
-      if (!isDirect && leg.stopIds && leg.stopIds.length > 0) {
-        const stopId = leg.stopIds[0];
-        const stop = places[stopId];
+      if (hasLayover && flight.layovers[0]) {
+        const layover = flight.layovers[0];
         layoverInfo = {
-          airport: stop.iata,
-          city: stop.name,
-          duration: `${Math.floor(leg.stopDurationMinutes / 60)}h ${leg.stopDurationMinutes % 60}m`
+          airport: layover.airport?.name || "Unknown",
+          city: layover.airport?.name?.split(" ")[0] || "Unknown",
+          duration: layover.duration || "Unknown"
         };
       }
 
-      // Format duration
-      const durationHours = Math.floor(leg.durationMinutes / 60);
-      const durationMinutes = leg.durationMinutes % 60;
-      const formattedDuration = `${durationHours}h ${durationMinutes}m`;
-
-      // Format times
-      const departureTime = new Date(leg.departureDateTime).toLocaleTimeString('en-US', {
-        hour: '2-digit', 
-        minute: '2-digit',
-        hour12: true
-      });
+      // Format flight duration
+      const duration = flight.duration || "Unknown";
       
-      const arrivalTime = new Date(leg.arrivalDateTime).toLocaleTimeString('en-US', {
-        hour: '2-digit', 
-        minute: '2-digit',
-        hour12: true
-      });
+      // Format airline logo
+      const logo = flight.airline?.logo || `https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://${flight.airline?.name?.toLowerCase().replace(/\s+/g, '')}.com&size=64`;
 
       return {
-        id: legId,
-        airline: carrier.name || "Unknown Airline",
-        flightNumber: leg.operatingCarrierIds.join(' ') || "Unknown",
-        departureTime: departureTime,
-        arrivalTime: arrivalTime,
-        duration: formattedDuration,
-        departureAirport: origin.iata,
-        departureCity: origin.name,
-        arrivalAirport: destination.iata,
-        arrivalCity: destination.name,
-        price: itin.pricingOptions[0].price.amount,
-        direct: isDirect,
+        id: `flight-${index + 1}`,
+        airline: flight.airline?.name || "Unknown Airline",
+        flightNumber: flight.flight_number || `FL${1000 + index}`,
+        departureTime: flight.departure_time?.time || "Unknown",
+        arrivalTime: flight.arrival_time?.time || "Unknown",
+        duration: duration,
+        departureAirport: departureInfo.id || params.origin,
+        departureCity: departureInfo.name || params.origin,
+        arrivalAirport: arrivalInfo.id || params.destination,
+        arrivalCity: arrivalInfo.name || params.destination,
+        price: flight.price?.total?.amount || 0,
+        direct: !hasLayover,
         layoverAirport: layoverInfo?.airport,
         layoverCity: layoverInfo?.city,
         layoverDuration: layoverInfo?.duration,
-        baggageAllowance: "15 kg", // Default as API might not provide this
-        amenities: carrier.name.includes("Air India") ? ['Meal', 'Entertainment'] : 
-                 carrier.name.includes("IndiGo") ? ['Paid Meal'] :
-                 carrier.name.includes("Vistara") ? ['Premium Meal', 'Entertainment'] :
-                 ['Paid Meal'],
-        logo: `https://logos.skyscnr.com/images/airlines/favicon/${carrierId}.png`
+        baggageAllowance: flight.baggage_info || "15 kg",
+        amenities: flight.amenities?.map((amenity: string) => amenity) || ["Standard Service"],
+        logo: logo
       };
     });
   } catch (error) {
@@ -198,7 +170,7 @@ function transformSkyscannerResponse(apiResponse: any, params: FlightSearchParam
   }
 }
 
-// Sample data as fallback
+// Sample data as fallback - keeping the same sample data
 function getSampleFlightData(params: FlightSearchParams): FlightResult[] {
   return [
     {
