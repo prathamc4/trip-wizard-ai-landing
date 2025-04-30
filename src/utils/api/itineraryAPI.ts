@@ -255,7 +255,7 @@ function getSampleItinerary(request: ItineraryRequest): ItineraryResponse {
     days.push({
       day: i + 1,
       date: formattedDate,
-      activities: generateSampleActivities(i + 1, destination)
+      activities: generateSampleActivities(i + 1, destination, dayCount)
     });
   }
   
@@ -263,7 +263,7 @@ function getSampleItinerary(request: ItineraryRequest): ItineraryResponse {
 }
 
 // Generate sample activities for a specific destination
-function generateSampleActivities(day: number, destination: string): Activity[] {
+function generateSampleActivities(day: number, destination: string, dayCount: number): Activity[] {
   // Create destination-specific activities
   let landmarkName = "Famous Landmark";
   let localFood = "Local Specialties";

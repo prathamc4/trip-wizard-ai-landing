@@ -1,3 +1,4 @@
+
 import { toast } from 'sonner';
 
 export interface HotelSearchParams {
@@ -179,7 +180,7 @@ function transformSerpAPIHotelResponse(apiResponse: any, params: HotelSearchPara
 }
 
 // Sample data as fallback - enhanced with destination-specific data
-function getSampleHotelData(params: HotelSearchParams): HotelResult[] {
+function getSampleHotelData(params: HotelSearchParams = {destination: 'New Delhi', checkInDate: '2025-05-15', checkOutDate: '2025-05-18'}): HotelResult[] {
   // Extract destination to provide more relevant sample data
   const destination = params.destination || 'New Delhi';
   
