@@ -45,56 +45,21 @@ export const fetchFlights = async (params: FlightSearchParams): Promise<FlightRe
   }
 
   try {
-    // SerpAPI endpoint for Google Flights
-    const url = `https://serpapi.com/search`;
+    console.log('Fetching flight data with params:', params);
     
-    // Prepare query parameters
-    const queryParams = new URLSearchParams({
-      engine: 'google_flights',
-      departure_id: params.origin,
-      arrival_id: params.destination,
-      outbound_date: params.departureDate,
-      currency: params.currency || 'INR',
-      type: '2',
-      api_key: import.meta.env.VITE_SERPAPI_KEY || ''
-    });
+    // Due to CORS restrictions, we'll use sample data for now
+    // In a production app, you would use a backend proxy or serverless function
+    console.log('Using sample flight data due to CORS restrictions');
     
-    // Add return date if provided
-    if (params.returnDate) {
-      queryParams.append('return_date', params.returnDate);
-    }
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 800));
     
-    // Add adults if provided
-    if (params.adults && params.adults > 1) {
-      queryParams.append('adult', params.adults.toString());
-    }
-
-    // Make API call with a small delay to avoid rate limiting
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Use sample data
+    const fallbackData = getSampleFlightData(params);
     
-    const response = await fetch(`${url}?${queryParams.toString()}`);
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('API Error:', response.status, errorText);
-      
-      // Fall back to sample data if API fails
-      const fallbackData = getSampleFlightData(params);
-      toast.error("Could not fetch real flight data. Showing sample results instead.");
-      
-      // Cache the fallback data
-      cache[cacheKey] = { data: fallbackData, timestamp: now };
-      return fallbackData;
-    }
-
-    const data = await response.json();
-    
-    // Transform API response to our FlightResult interface
-    const results: FlightResult[] = transformSerpAPIResponse(data, params);
-    
-    // Cache the results
-    cache[cacheKey] = { data: results, timestamp: now };
-    return results;
+    // Cache the data
+    cache[cacheKey] = { data: fallbackData, timestamp: now };
+    return fallbackData;
     
   } catch (error) {
     console.error('Error fetching flight data:', error);
@@ -172,6 +137,7 @@ function transformSerpAPIResponse(apiResponse: any, params: FlightSearchParams):
 
 // Sample data as fallback - keeping the same sample data
 function getSampleFlightData(params: FlightSearchParams): FlightResult[] {
+  // Enhanced sample data with more variety
   return [
     {
       id: '1',

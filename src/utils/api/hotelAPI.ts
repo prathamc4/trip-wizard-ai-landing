@@ -36,56 +36,27 @@ export const fetchHotels = async (params: HotelSearchParams): Promise<HotelResul
   }
 
   try {
-    // SerpAPI endpoint for Google Hotels
-    const url = `https://serpapi.com/search`;
+    console.log('Fetching hotel data with params:', params);
     
-    // Prepare query parameters
-    const queryParams = new URLSearchParams({
-      engine: 'google_hotels',
-      q: `hotels in ${params.destination}`,
-      currency: params.currency || 'INR',
-      check_in_date: params.checkInDate,
-      check_out_date: params.checkOutDate,
-      api_key: import.meta.env.VITE_SERPAPI_KEY || ''
-    });
+    // Due to CORS restrictions, we'll use sample data for now
+    // In a production app, you would use a backend proxy or serverless function
+    console.log('Using sample hotel data due to CORS restrictions');
     
-    // Add adults if provided
-    if (params.adults && params.adults > 1) {
-      queryParams.append('num_adults', params.adults.toString());
-    }
-
-    // Make API call with a small delay to avoid rate limiting
-    await new Promise(resolve => setTimeout(resolve, 700));
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 1000));
     
-    const response = await fetch(`${url}?${queryParams.toString()}`);
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('API Error:', response.status, errorText);
-      
-      // Fall back to sample data if API fails
-      const fallbackData = getSampleHotelData();
-      toast.error("Could not fetch real hotel data. Showing sample results instead.");
-      
-      // Cache the fallback data
-      cache[cacheKey] = { data: fallbackData, timestamp: now };
-      return fallbackData;
-    }
-
-    const data = await response.json();
+    // Use sample data
+    const fallbackData = getSampleHotelData(params);
     
-    // Transform API response to our HotelResult interface
-    const results: HotelResult[] = transformSerpAPIHotelResponse(data, params);
-    
-    // Cache the results
-    cache[cacheKey] = { data: results, timestamp: now };
-    return results;
+    // Cache the data
+    cache[cacheKey] = { data: fallbackData, timestamp: now };
+    return fallbackData;
     
   } catch (error) {
     console.error('Error fetching hotel data:', error);
     
     // Fall back to sample data on error
-    const fallbackData = getSampleHotelData();
+    const fallbackData = getSampleHotelData(params);
     toast.error("Network error when fetching hotels. Showing sample results instead.");
     
     // Cache the fallback data
@@ -207,19 +178,22 @@ function transformSerpAPIHotelResponse(apiResponse: any, params: HotelSearchPara
   }
 }
 
-// Sample data as fallback - keeping the same structure
-function getSampleHotelData(): HotelResult[] {
+// Sample data as fallback - enhanced with destination-specific data
+function getSampleHotelData(params: HotelSearchParams): HotelResult[] {
+  // Extract destination to provide more relevant sample data
+  const destination = params.destination || 'New Delhi';
+  
   return [
     {
       id: 1,
-      name: 'Taj Palace New Delhi',
+      name: `Luxury Palace ${destination}`,
       rating: 5,
       price: 12500,
-      address: 'Diplomatic Enclave, New Delhi',
+      address: `Downtown, ${destination}, India`,
       amenities: ['wifi', 'parking', 'breakfast', 'ac', 'pool', 'gym'],
       vegetarianFriendly: true,
-      distanceFromStation: '4.5 km from New Delhi Railway Station',
-      description: 'Luxury 5-star hotel with elegant rooms, multiple dining options, and excellent service.',
+      distanceFromStation: `4.5 km from ${destination} Railway Station`,
+      description: `Luxury 5-star hotel in ${destination} with elegant rooms, multiple dining options, and excellent service.`,
       images: [
         'https://images.unsplash.com/photo-1472396961693-142e6e269027?fit=crop&w=600&h=400',
         'https://images.unsplash.com/photo-1482938289607-e9573fc25ebb?fit=crop&w=600&h=400',
@@ -228,14 +202,14 @@ function getSampleHotelData(): HotelResult[] {
     },
     {
       id: 2,
-      name: 'OYO Townhouse 285',
+      name: `OYO Townhouse ${destination}`,
       rating: 3,
       price: 2299,
-      address: 'Karol Bagh, New Delhi',
+      address: `Central Area, ${destination}, India`,
       amenities: ['wifi', 'ac', 'breakfast'],
       vegetarianFriendly: true,
-      distanceFromStation: '1.2 km from Karol Bagh Metro Station',
-      description: 'Budget-friendly hotel with clean rooms and essential amenities for travelers.',
+      distanceFromStation: `1.2 km from ${destination} Metro Station`,
+      description: `Budget-friendly hotel in ${destination} with clean rooms and essential amenities for travelers.`,
       images: [
         'https://images.unsplash.com/photo-1500375592092-40eb2168fd21?fit=crop&w=600&h=400',
         'https://images.unsplash.com/photo-1482938289607-e9573fc25ebb?fit=crop&w=600&h=400',
@@ -244,14 +218,14 @@ function getSampleHotelData(): HotelResult[] {
     },
     {
       id: 3,
-      name: 'Leela Palace New Delhi',
+      name: `Grand Royal ${destination}`,
       rating: 5,
       price: 18500,
-      address: 'Diplomatic Enclave, Chanakyapuri, New Delhi',
+      address: `Diplomatic Area, ${destination}, India`,
       amenities: ['wifi', 'parking', 'breakfast', 'ac', 'pool', 'spa', 'gym'],
       vegetarianFriendly: true,
-      distanceFromStation: '7 km from New Delhi Railway Station',
-      description: 'Opulent 5-star hotel with royal decor, world-class dining, and impeccable service.',
+      distanceFromStation: `7 km from ${destination} Railway Station`,
+      description: `Opulent 5-star hotel in ${destination} with royal decor, world-class dining, and impeccable service.`,
       images: [
         'https://images.unsplash.com/photo-1469041797191-50ace28483c3?fit=crop&w=600&h=400',
         'https://images.unsplash.com/photo-1518877593221-1f28583780b4?fit=crop&w=600&h=400',
@@ -260,14 +234,14 @@ function getSampleHotelData(): HotelResult[] {
     },
     {
       id: 4,
-      name: 'Hotel Aira Xing by Staybook',
+      name: `Hotel Central ${destination}`,
       rating: 3,
       price: 1899,
-      address: 'Paharganj, New Delhi',
+      address: `Near Market, ${destination}, India`,
       amenities: ['wifi', 'ac'],
       vegetarianFriendly: true,
-      distanceFromStation: '0.5 km from New Delhi Railway Station',
-      description: 'Convenient budget hotel close to the railway station with basic amenities.',
+      distanceFromStation: `0.5 km from ${destination} Railway Station`,
+      description: `Convenient budget hotel close to the railway station in ${destination} with basic amenities.`,
       images: [
         'https://images.unsplash.com/photo-1518877593221-1f28583780b4?fit=crop&w=600&h=400',
         'https://images.unsplash.com/photo-1469041797191-50ace28483c3?fit=crop&w=600&h=400',
