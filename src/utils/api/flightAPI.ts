@@ -1,3 +1,4 @@
+
 import { toast } from 'sonner';
 
 export interface FlightSearchParams {
@@ -47,26 +48,71 @@ export const fetchFlights = async (params: FlightSearchParams): Promise<FlightRe
   try {
     console.log('Fetching flight data with params:', params);
     
-    // Due to CORS restrictions, we'll use sample data for now
-    // In a production app, you would use a backend proxy or serverless function
-    console.log('Using sample flight data due to CORS restrictions');
+    // Prepare the SerpAPI request
+    const apiKey = import.meta.env.VITE_SERPAPI_KEY;
+    if (!apiKey) {
+      throw new Error('SerpAPI key not found in environment variables');
+    }
     
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 800));
+    // Build SerpAPI URL for Google Flights
+    const serpApiUrl = `https://serpapi.com/search.json?engine=google_flights&departure_id=${encodeURIComponent(params.origin)}&arrival_id=${encodeURIComponent(params.destination)}&outbound_date=${params.departureDate}${params.returnDate ? `&return_date=${params.returnDate}` : ''}&adults=${params.adults || 1}&currency=${params.currency || 'INR'}&api_key=${apiKey}`;
     
-    // Use sample data
-    const fallbackData = getSampleFlightData(params);
+    console.log('Making API request to SerpAPI for flight data');
     
-    // Cache the data
-    cache[cacheKey] = { data: fallbackData, timestamp: now };
-    return fallbackData;
+    // Make request to SerpAPI
+    const response = await fetch(serpApiUrl);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('SerpAPI Error:', response.status, errorText);
+      throw new Error(`SerpAPI request failed: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    console.log('SerpAPI response received:', data);
+    
+    // Transform the API response to our format
+    const transformedData = transformSerpAPIResponse(data, params);
+    
+    // Cache the transformed data
+    cache[cacheKey] = { data: transformedData, timestamp: now };
+    return transformedData;
     
   } catch (error) {
     console.error('Error fetching flight data:', error);
     
+    // If the error is due to CORS, try using a CORS proxy
+    if (error.toString().includes('CORS')) {
+      try {
+        console.log('Attempting to use CORS proxy for flight data');
+        const proxyUrl = 'https://cors-anywhere.herokuapp.com/';
+        const apiKey = import.meta.env.VITE_SERPAPI_KEY;
+        
+        const serpApiUrl = `${proxyUrl}https://serpapi.com/search.json?engine=google_flights&departure_id=${encodeURIComponent(params.origin)}&arrival_id=${encodeURIComponent(params.destination)}&outbound_date=${params.departureDate}${params.returnDate ? `&return_date=${params.returnDate}` : ''}&adults=${params.adults || 1}&currency=${params.currency || 'INR'}&api_key=${apiKey}`;
+        
+        const response = await fetch(serpApiUrl);
+        
+        if (!response.ok) {
+          throw new Error(`Proxy request failed: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        const transformedData = transformSerpAPIResponse(data, params);
+        
+        // Cache the transformed data
+        cache[cacheKey] = { data: transformedData, timestamp: now };
+        return transformedData;
+      } catch (proxyError) {
+        console.error('CORS proxy attempt failed:', proxyError);
+      }
+    }
+    
     // Fall back to sample data on error
     const fallbackData = getSampleFlightData(params);
     toast.error("Network error when fetching flights. Showing sample results instead.");
+    toast('API Error: ' + error.message, {
+      description: 'Using sample data instead. Check console for details.'
+    });
     
     // Cache the fallback data
     cache[cacheKey] = { data: fallbackData, timestamp: now };

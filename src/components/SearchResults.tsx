@@ -9,6 +9,7 @@ import SaveTripButton from '@/components/results/SaveTripButton';
 import { AlertCircle, Gauge } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useEffect, useState } from 'react';
+import ApiDebugStatus from './ApiDebugStatus';
 
 interface SearchResultsProps {
   activeTab: string;
@@ -27,6 +28,12 @@ const SearchResults: React.FC<SearchResultsProps> = ({ activeTab }) => {
     weatherAlert: 'Monsoon season (June-September). Occasional heavy rainfall expected.',
     currency: '₹ INR',
     timezone: 'IST (UTC+5:30)'
+  });
+  const [apiStatus, setApiStatus] = useState({
+    flights: { error: false, errorMessage: '' },
+    hotels: { error: false, errorMessage: '' },
+    attractions: { error: false, errorMessage: '' },
+    itinerary: { error: false, errorMessage: '' }
   });
 
   useEffect(() => {
@@ -78,8 +85,53 @@ const SearchResults: React.FC<SearchResultsProps> = ({ activeTab }) => {
       }
     };
     
+    // Monitor for API errors by listening to toast messages
+    const originalConsoleError = console.error;
+    console.error = (...args) => {
+      originalConsoleError(...args);
+      
+      // Check if this is an API error
+      const errorMessage = args.join(' ');
+      if (errorMessage.includes('Error fetching flight data')) {
+        setApiStatus(prev => ({
+          ...prev,
+          flights: { error: true, errorMessage }
+        }));
+      } else if (errorMessage.includes('Error fetching hotel data')) {
+        setApiStatus(prev => ({
+          ...prev,
+          hotels: { error: true, errorMessage }
+        }));
+      } else if (errorMessage.includes('Error fetching attraction data')) {
+        setApiStatus(prev => ({
+          ...prev,
+          attractions: { error: true, errorMessage }
+        }));
+      } else if (errorMessage.includes('Error generating itinerary')) {
+        setApiStatus(prev => ({
+          ...prev,
+          itinerary: { error: true, errorMessage }
+        }));
+      }
+    };
+    
     loadDestinationInfo();
+    
+    return () => {
+      console.error = originalConsoleError;
+    };
   }, []);
+
+  const handleApiRetry = (apiName: 'flights' | 'hotels' | 'attractions' | 'itinerary') => {
+    // Reset error state for this API
+    setApiStatus(prev => ({
+      ...prev,
+      [apiName]: { error: false, errorMessage: '' }
+    }));
+    
+    // Force refresh the component
+    window.location.reload();
+  };
 
   return (
     <>
@@ -108,18 +160,42 @@ const SearchResults: React.FC<SearchResultsProps> = ({ activeTab }) => {
       </div>
       
       <TabsContent value="flights" className="space-y-4">
+        <ApiDebugStatus 
+          isUsingSampleData={apiStatus.flights.error} 
+          apiName="Flight" 
+          lastError={apiStatus.flights.errorMessage}
+          onRetry={() => handleApiRetry('flights')}
+        />
         <FlightResults />
       </TabsContent>
       
       <TabsContent value="hotels" className="space-y-4">
+        <ApiDebugStatus 
+          isUsingSampleData={apiStatus.hotels.error} 
+          apiName="Hotel" 
+          lastError={apiStatus.hotels.errorMessage}
+          onRetry={() => handleApiRetry('hotels')}
+        />
         <HotelResults />
       </TabsContent>
       
       <TabsContent value="itinerary" className="space-y-4">
+        <ApiDebugStatus 
+          isUsingSampleData={apiStatus.itinerary.error} 
+          apiName="Itinerary" 
+          lastError={apiStatus.itinerary.errorMessage}
+          onRetry={() => handleApiRetry('itinerary')}
+        />
         <ItineraryResults />
       </TabsContent>
       
       <TabsContent value="attractions" className="space-y-4">
+        <ApiDebugStatus 
+          isUsingSampleData={apiStatus.attractions.error} 
+          apiName="Attractions" 
+          lastError={apiStatus.attractions.errorMessage}
+          onRetry={() => handleApiRetry('attractions')}
+        />
         <AttractionsResults />
       </TabsContent>
     </>
