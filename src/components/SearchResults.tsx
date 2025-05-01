@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { TabsContent } from '@/components/ui/tabs';
 import FlightResults from '@/components/results/FlightResults';
@@ -6,7 +5,7 @@ import HotelResults from '@/components/results/HotelResults';
 import ItineraryResults from '@/components/results/ItineraryResults';
 import AttractionsResults from '@/components/results/AttractionsResults';
 import SaveTripButton from '@/components/results/SaveTripButton';
-import { AlertCircle, Gauge, InfoCircle } from 'lucide-react';
+import { AlertCircle, Gauge, Info } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useEffect, useState } from 'react';
 import ApiDebugStatus from './ApiDebugStatus';
