@@ -1,4 +1,3 @@
-
 import { toast } from 'sonner';
 
 export interface FlightSearchParams {
@@ -35,6 +34,13 @@ export interface FlightResult {
 const cache: Record<string, { data: FlightResult[], timestamp: number }> = {};
 const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
 
+// List of public CORS proxies to try
+const CORS_PROXIES = [
+  'https://corsproxy.io/?',
+  'https://api.allorigins.win/raw?url=',
+  'https://cors-anywhere.herokuapp.com/'
+];
+
 export const fetchFlights = async (params: FlightSearchParams): Promise<FlightResult[]> => {
   const cacheKey = JSON.stringify(params);
   const now = Date.now();
@@ -48,71 +54,82 @@ export const fetchFlights = async (params: FlightSearchParams): Promise<FlightRe
   try {
     console.log('Fetching flight data with params:', params);
     
-    // Prepare the SerpAPI request
+    // Check if we have a Serpapi key
     const apiKey = import.meta.env.VITE_SERPAPI_KEY;
     if (!apiKey) {
-      throw new Error('SerpAPI key not found in environment variables');
+      console.warn('SerpAPI key not found in environment variables');
+      // If no API key, use sample data immediately
+      throw new Error('SerpAPI key not found');
     }
-    
-    // Build SerpAPI URL for Google Flights
-    const serpApiUrl = `https://serpapi.com/search.json?engine=google_flights&departure_id=${encodeURIComponent(params.origin)}&arrival_id=${encodeURIComponent(params.destination)}&outbound_date=${params.departureDate}${params.returnDate ? `&return_date=${params.returnDate}` : ''}&adults=${params.adults || 1}&currency=${params.currency || 'INR'}&api_key=${apiKey}`;
+
+    // Try direct API call first
+    let serpApiUrl = `https://serpapi.com/search.json?engine=google_flights&departure_id=${encodeURIComponent(params.origin)}&arrival_id=${encodeURIComponent(params.destination)}&outbound_date=${params.departureDate}${params.returnDate ? `&return_date=${params.returnDate}` : ''}&adults=${params.adults || 1}&currency=${params.currency || 'INR'}&api_key=${apiKey}`;
     
     console.log('Making API request to SerpAPI for flight data');
     
-    // Make request to SerpAPI
-    const response = await fetch(serpApiUrl);
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('SerpAPI Error:', response.status, errorText);
-      throw new Error(`SerpAPI request failed: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    console.log('SerpAPI response received:', data);
-    
-    // Transform the API response to our format
-    const transformedData = transformSerpAPIResponse(data, params);
-    
-    // Cache the transformed data
-    cache[cacheKey] = { data: transformedData, timestamp: now };
-    return transformedData;
-    
-  } catch (error) {
-    console.error('Error fetching flight data:', error);
-    
-    // If the error is due to CORS, try using a CORS proxy
-    if (error.toString().includes('CORS')) {
-      try {
-        console.log('Attempting to use CORS proxy for flight data');
-        const proxyUrl = 'https://cors-anywhere.herokuapp.com/';
-        const apiKey = import.meta.env.VITE_SERPAPI_KEY;
-        
-        const serpApiUrl = `${proxyUrl}https://serpapi.com/search.json?engine=google_flights&departure_id=${encodeURIComponent(params.origin)}&arrival_id=${encodeURIComponent(params.destination)}&outbound_date=${params.departureDate}${params.returnDate ? `&return_date=${params.returnDate}` : ''}&adults=${params.adults || 1}&currency=${params.currency || 'INR'}&api_key=${apiKey}`;
-        
-        const response = await fetch(serpApiUrl);
-        
-        if (!response.ok) {
-          throw new Error(`Proxy request failed: ${response.status}`);
-        }
-        
+    // Try the direct request first
+    try {
+      const response = await fetch(serpApiUrl);
+      
+      if (response.ok) {
         const data = await response.json();
+        console.log('SerpAPI response received successfully');
+        
+        // Transform the API response to our format
         const transformedData = transformSerpAPIResponse(data, params);
         
         // Cache the transformed data
         cache[cacheKey] = { data: transformedData, timestamp: now };
         return transformedData;
-      } catch (proxyError) {
-        console.error('CORS proxy attempt failed:', proxyError);
       }
+      
+      // If direct request fails, log the error but continue to try proxies
+      const errorText = await response.text();
+      console.warn('Direct SerpAPI request failed:', response.status, errorText);
+      throw new Error(`SerpAPI direct request failed: ${response.status}`);
+    } catch (directError) {
+      console.warn('Direct API call failed, trying CORS proxies');
+      
+      // Try each proxy in sequence
+      for (const proxy of CORS_PROXIES) {
+        try {
+          console.log(`Attempting with CORS proxy: ${proxy}`);
+          
+          // Use the proxy to make the request
+          const proxyUrl = `${proxy}${encodeURIComponent(serpApiUrl)}`;
+          
+          const proxyResponse = await fetch(proxyUrl);
+          
+          if (proxyResponse.ok) {
+            const data = await proxyResponse.json();
+            console.log('Proxy response successful');
+            
+            // Transform the API response to our format
+            const transformedData = transformSerpAPIResponse(data, params);
+            
+            // Cache the transformed data
+            cache[cacheKey] = { data: transformedData, timestamp: now };
+            return transformedData;
+          }
+          
+          // This proxy failed, try the next one
+          const errorText = await proxyResponse.text();
+          console.warn(`Proxy ${proxy} failed:`, proxyResponse.status, errorText);
+        } catch (proxyError) {
+          // This proxy failed, continue to the next one
+          console.warn(`Proxy ${proxy} error:`, proxyError);
+        }
+      }
+      
+      // All proxies failed, throw an error to trigger sample data
+      throw new Error('All CORS proxies failed');
     }
+  } catch (error) {
+    console.error('Error fetching flight data:', error);
     
     // Fall back to sample data on error
     const fallbackData = getSampleFlightData(params);
     toast.error("Network error when fetching flights. Showing sample results instead.");
-    toast('API Error: ' + error.message, {
-      description: 'Using sample data instead. Check console for details.'
-    });
     
     // Cache the fallback data
     cache[cacheKey] = { data: fallbackData, timestamp: now };
@@ -193,9 +210,9 @@ function getSampleFlightData(params: FlightSearchParams): FlightResult[] {
       arrivalTime: '08:35 AM',
       duration: '2h 20m',
       departureAirport: params.origin || 'DEL',
-      departureCity: params.origin === 'BOM' ? 'Mumbai' : 'New Delhi',
+      departureCity: params.origin === 'BOM' ? 'Mumbai' : params.origin || 'New Delhi',
       arrivalAirport: params.destination || 'BOM',
-      arrivalCity: params.destination === 'DEL' ? 'New Delhi' : 'Mumbai',
+      arrivalCity: params.destination || 'Mumbai',
       price: 4899,
       direct: true,
       baggageAllowance: '25 kg',
@@ -210,9 +227,9 @@ function getSampleFlightData(params: FlightSearchParams): FlightResult[] {
       arrivalTime: '10:40 AM',
       duration: '2h 15m',
       departureAirport: params.origin || 'DEL',
-      departureCity: params.origin === 'BOM' ? 'Mumbai' : 'New Delhi',
+      departureCity: params.origin === 'BOM' ? 'Mumbai' : params.origin || 'New Delhi',
       arrivalAirport: params.destination || 'BOM',
-      arrivalCity: params.destination === 'DEL' ? 'New Delhi' : 'Mumbai',
+      arrivalCity: params.destination || 'Mumbai',
       price: 3750,
       direct: true,
       baggageAllowance: '15 kg',
@@ -227,9 +244,9 @@ function getSampleFlightData(params: FlightSearchParams): FlightResult[] {
       arrivalTime: '13:55 PM',
       duration: '2h 25m',
       departureAirport: params.origin || 'DEL',
-      departureCity: params.origin === 'BOM' ? 'Mumbai' : 'New Delhi',
+      departureCity: params.origin === 'BOM' ? 'Mumbai' : params.origin || 'New Delhi',
       arrivalAirport: params.destination || 'BOM',
-      arrivalCity: params.destination === 'DEL' ? 'New Delhi' : 'Mumbai',
+      arrivalCity: params.destination || 'Mumbai',
       price: 5299,
       direct: true,
       baggageAllowance: '20 kg',
@@ -244,9 +261,9 @@ function getSampleFlightData(params: FlightSearchParams): FlightResult[] {
       arrivalTime: '20:05 PM',
       duration: '3h 20m',
       departureAirport: params.origin || 'DEL',
-      departureCity: params.origin === 'BOM' ? 'Mumbai' : 'New Delhi',
+      departureCity: params.origin === 'BOM' ? 'Mumbai' : params.origin || 'New Delhi',
       arrivalAirport: params.destination || 'BOM',
-      arrivalCity: params.destination === 'DEL' ? 'New Delhi' : 'Mumbai',
+      arrivalCity: params.destination || 'Mumbai',
       price: 3499,
       direct: false,
       layoverAirport: 'AMD',

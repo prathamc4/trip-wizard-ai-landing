@@ -2,7 +2,7 @@
 import React from 'react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { AlertCircle, Bug, RefreshCcw } from 'lucide-react';
+import { AlertCircle, Bug, RefreshCcw, ExternalLink } from 'lucide-react';
 
 interface ApiStatusProps {
   isUsingSampleData: boolean;
@@ -25,23 +25,31 @@ const ApiDebugStatus: React.FC<ApiStatusProps> = ({
     <Alert variant="destructive" className="mb-4">
       <AlertCircle className="h-4 w-4" />
       <AlertTitle className="flex items-center gap-2">
-        <Bug className="h-4 w-4" /> API Connection Issue: {apiName}
+        <Bug className="h-4 w-4" /> Demo Mode: {apiName} API
       </AlertTitle>
       <AlertDescription className="mt-2">
         <p>
-          Currently using sample data because we couldn't connect to the {apiName} API.
+          Currently showing sample {apiName.toLowerCase()} data because we couldn't connect to the real API.
           {lastError && <span className="block mt-1 text-xs opacity-75">Error: {lastError}</span>}
         </p>
-        {onRetry && (
+        <div className="flex flex-wrap gap-2 mt-2">
+          {onRetry && (
+            <Button 
+              onClick={onRetry} 
+              variant="outline" 
+              size="sm"
+            >
+              <RefreshCcw className="h-3 w-3 mr-1" /> Retry API
+            </Button>
+          )}
           <Button 
-            onClick={onRetry} 
             variant="outline" 
-            size="sm" 
-            className="mt-2"
+            size="sm"
+            onClick={() => window.open('https://docs.lovable.dev/tips-tricks/troubleshooting#api-connection-issues', '_blank')}
           >
-            <RefreshCcw className="h-3 w-3 mr-1" /> Retry API
+            <ExternalLink className="h-3 w-3 mr-1" /> API Troubleshooting
           </Button>
-        )}
+        </div>
       </AlertDescription>
     </Alert>
   );

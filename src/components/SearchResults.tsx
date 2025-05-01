@@ -6,10 +6,12 @@ import HotelResults from '@/components/results/HotelResults';
 import ItineraryResults from '@/components/results/ItineraryResults';
 import AttractionsResults from '@/components/results/AttractionsResults';
 import SaveTripButton from '@/components/results/SaveTripButton';
-import { AlertCircle, Gauge } from 'lucide-react';
+import { AlertCircle, Gauge, InfoCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useEffect, useState } from 'react';
 import ApiDebugStatus from './ApiDebugStatus';
+import { toast } from 'sonner';
+import { Button } from './ui/button';
 
 interface SearchResultsProps {
   activeTab: string;
@@ -35,6 +37,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ activeTab }) => {
     attractions: { error: false, errorMessage: '' },
     itinerary: { error: false, errorMessage: '' }
   });
+  const [demoModeActive, setDemoModeActive] = useState(false);
 
   useEffect(() => {
     // Load destination information based on the search
@@ -74,6 +77,9 @@ const SearchResults: React.FC<SearchResultsProps> = ({ activeTab }) => {
         } else if (destination.includes('chennai')) {
           airQuality = 'Moderate';
           weatherAlert += ' Expect humid coastal climate.';
+        } else if (destination.includes('thiruvananthapuram') || destination.includes('kerala')) {
+          airQuality = 'Good';
+          weatherAlert += ' Tropical climate with possible rain showers.';
         }
         
         setDestinationInfo({
@@ -85,29 +91,45 @@ const SearchResults: React.FC<SearchResultsProps> = ({ activeTab }) => {
       }
     };
     
-    // Monitor for API errors by listening to toast messages
+    // Check if SERPAPI key is available
+    const checkApiKeys = () => {
+      const hasApiKey = import.meta.env.VITE_SERPAPI_KEY || 
+                        import.meta.env.VITE_GEMINI_API_KEY || 
+                        import.meta.env.VITE_OPENAI_API_KEY;
+      
+      if (!hasApiKey) {
+        setDemoModeActive(true);
+        console.warn("No API keys found. Running in demo mode with sample data.");
+      }
+    };
+    
+    // Monitor for API errors by listening to console errors
     const originalConsoleError = console.error;
     console.error = (...args) => {
       originalConsoleError(...args);
       
       // Check if this is an API error
       const errorMessage = args.join(' ');
-      if (errorMessage.includes('Error fetching flight data')) {
+      if (errorMessage.includes('Error fetching flight data') || 
+          errorMessage.includes('Failed to fetch') && activeTab === 'flights') {
         setApiStatus(prev => ({
           ...prev,
           flights: { error: true, errorMessage }
         }));
-      } else if (errorMessage.includes('Error fetching hotel data')) {
+      } else if (errorMessage.includes('Error fetching hotel data') || 
+                errorMessage.includes('Failed to fetch') && activeTab === 'hotels') {
         setApiStatus(prev => ({
           ...prev,
           hotels: { error: true, errorMessage }
         }));
-      } else if (errorMessage.includes('Error fetching attraction data')) {
+      } else if (errorMessage.includes('Error fetching attraction data') || 
+                errorMessage.includes('Failed to fetch') && activeTab === 'attractions') {
         setApiStatus(prev => ({
           ...prev,
           attractions: { error: true, errorMessage }
         }));
-      } else if (errorMessage.includes('Error generating itinerary')) {
+      } else if (errorMessage.includes('Error generating itinerary') || 
+                errorMessage.includes('Failed to fetch') && activeTab === 'itinerary') {
         setApiStatus(prev => ({
           ...prev,
           itinerary: { error: true, errorMessage }
@@ -116,11 +138,12 @@ const SearchResults: React.FC<SearchResultsProps> = ({ activeTab }) => {
     };
     
     loadDestinationInfo();
+    checkApiKeys();
     
     return () => {
       console.error = originalConsoleError;
     };
-  }, []);
+  }, [activeTab]);
 
   const handleApiRetry = (apiName: 'flights' | 'hotels' | 'attractions' | 'itinerary') => {
     // Reset error state for this API
@@ -129,8 +152,23 @@ const SearchResults: React.FC<SearchResultsProps> = ({ activeTab }) => {
       [apiName]: { error: false, errorMessage: '' }
     }));
     
+    toast.success(`Retrying ${apiName} API connection...`);
+    
     // Force refresh the component
     window.location.reload();
+  };
+
+  const handleAddApiKey = () => {
+    toast.info(
+      <div>
+        <p>To use real API data, add your API keys in the .env.local file:</p>
+        <pre className="bg-gray-100 p-2 mt-2 rounded text-xs">
+          VITE_SERPAPI_KEY=your_key_here<br/>
+          VITE_GEMINI_API_KEY=your_key_here
+        </pre>
+      </div>,
+      { duration: 8000 }
+    );
   };
 
   return (
@@ -140,6 +178,24 @@ const SearchResults: React.FC<SearchResultsProps> = ({ activeTab }) => {
         <SaveTripButton />
       </div>
       
+      {demoModeActive && (
+        <Alert variant="warning" className="mb-4 bg-blue-50 border-blue-200">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Demo Mode Active</AlertTitle>
+          <AlertDescription className="mt-1">
+            <p>Running with sample data since no API keys are configured.</p>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="mt-2"
+              onClick={handleAddApiKey}
+            >
+              How to Add API Keys
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
       <div className="mb-6 space-y-3">
         <Alert variant="warning" className="bg-amber-50 border-amber-200">
           <AlertCircle className="h-4 w-4" />

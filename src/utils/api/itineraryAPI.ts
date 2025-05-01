@@ -1,3 +1,4 @@
+
 import { toast } from 'sonner';
 import { FlightResult } from './flightAPI';
 import { HotelResult } from './hotelAPI';
@@ -38,6 +39,13 @@ export interface ItineraryResponse {
 const cache: Record<string, { data: ItineraryResponse, timestamp: number }> = {};
 const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
 
+// List of public CORS proxies to try
+const CORS_PROXIES = [
+  'https://corsproxy.io/?',
+  'https://api.allorigins.win/raw?url=',
+  'https://cors-anywhere.herokuapp.com/'
+];
+
 export const generateItinerary = async (request: ItineraryRequest): Promise<ItineraryResponse> => {
   const cacheKey = JSON.stringify({
     destination: request.destination,
@@ -56,22 +64,36 @@ export const generateItinerary = async (request: ItineraryRequest): Promise<Itin
   try {
     console.log('Generating itinerary for destination:', request.destination);
     
-    // Due to CORS restrictions, we'll use sample data instead of direct Gemini API calls
-    // In a production app, you would use a backend proxy or serverless function
-    console.log('Using sample itinerary data due to CORS restrictions');
+    // Check if we have a Gemini API key or other AI service key
+    const aiApiKey = import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.VITE_OPENAI_API_KEY;
     
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1200));
+    if (!aiApiKey) {
+      console.warn('No AI API key found, using sample data');
+      throw new Error('No AI API key configured');
+    }
     
-    // Generate destination-specific itinerary
-    const fallbackData = getSampleItinerary(request);
-    
-    // Cache the results
-    cache[cacheKey] = { data: fallbackData, timestamp: now };
-    
-    console.log('Successfully generated sample itinerary');
-    return fallbackData;
-    
+    try {
+      // Simulate a successful API call for now
+      // This would be replaced with actual API integration in production
+      console.log('Using sample itinerary data due to CORS restrictions');
+      
+      // Calculate number of days for the itinerary
+      const start = new Date(request.startDate);
+      const end = new Date(request.endDate);
+      const calculatedDayCount = Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+      
+      // Generate sample data based on the actual request
+      const fallbackData = getSampleItinerary(request);
+      
+      // Cache the results
+      cache[cacheKey] = { data: fallbackData, timestamp: now };
+      
+      console.log('Successfully generated sample itinerary');
+      return fallbackData;
+    } catch (apiError) {
+      console.error('Direct API call failed:', apiError);
+      throw new Error(`AI service direct request failed: ${apiError.message}`);
+    }
   } catch (error) {
     console.error('Error generating itinerary:', error);
     
