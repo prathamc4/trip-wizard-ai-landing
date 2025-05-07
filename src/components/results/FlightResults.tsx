@@ -31,22 +31,23 @@ const FlightResults: React.FC = () => {
         let origin = 'DEL';
         let destination = 'BOM';
         let departureDate = '2025-05-15';
-        let returnDate = '2025-05-19'; // Initialize returnDate with an empty string or a default value
+        let returnDate = '2025-05-19';
 
         if (searchData) {
           const parsedData = JSON.parse(searchData);
           origin = parsedData.startLocation || origin;
           destination = parsedData.destination || destination;
           
+          // Use dates directly from search data - they should already be in the correct format
           if (parsedData.startDate) {
-            const date = new Date(parsedData.startDate);
-            departureDate = date.toISOString().split('T')[0];
+            departureDate = parsedData.startDate;
           }
           if (parsedData.endDate) {
-            const date = new Date(parsedData.endDate);
-            returnDate = date.toISOString().split('T')[0];
+            returnDate = parsedData.endDate;
           }
         }
+
+        console.log(`Fetching flights with dates: ${departureDate} to ${returnDate}`);
 
         // Fetch flights
         const flightResults = await fetchFlights({

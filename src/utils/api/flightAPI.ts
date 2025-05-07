@@ -31,18 +31,32 @@ export interface FlightResult {
 }
 
 // Cache mechanism to avoid redundant API calls
+const cache: Record<string, { data: FlightResult[], timestamp: number }> = {};
+const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
 
+// List of public CORS proxies to try
+const CORS_PROXIES = [
+  'https://corsproxy.io/?',
+  'https://api.allorigins.win/raw?url=',
+  'https://cors.sh/'
+];
 
 export const fetchFlights = async (params: FlightSearchParams): Promise<FlightResult[]> => {
+  const cacheKey = JSON.stringify(params);
   const now = Date.now();
   
   // Return cached data if available and not expired
+  if (cache[cacheKey] && now - cache[cacheKey].timestamp < CACHE_DURATION) {
+    console.log('Using cached flight data');
+    return cache[cacheKey].data;
+  }
+  
   try {
     console.log('Fetching flight data with params:', params);
     
     // Check if we have a Serpapi key
     const apiKey = import.meta.env.VITE_SERPAPI_KEY;
-    console.log("the api key is "+apiKey);
+    console.log("API key status:", apiKey ? "Available" : "Missing");
     
     if (!apiKey) {
       console.warn('SerpAPI key not found in environment variables');
@@ -50,21 +64,39 @@ export const fetchFlights = async (params: FlightSearchParams): Promise<FlightRe
       throw new Error('SerpAPI key not found');
     }
 
-    // Try direct API call first
-    if(params.origin=="Amritsar"){
-      params.origin="ATQ";
-      params.destination="DEL"
+    // Standardize airport codes based on city name
+    let origin = params.origin;
+    let destination = params.destination;
     
-    }
-    let serpApiUrl = `https://serpapi.com/search?engine=google_flights&departure_id=${encodeURIComponent(params.origin)}&arrival_id=${encodeURIComponent(params.destination)}&outbound_date=${params.departureDate}&return_date=${params.returnDate}&currency=${params.currency || 'INR'}&api_key=${apiKey}`;
+    // Convert common Indian cities to airport codes
+    const airportCodes: Record<string, string> = {
+      "Amritsar": "ATQ",
+      "Delhi": "DEL",
+      "Mumbai": "BOM",
+      "Chennai": "MAA",
+      "Bangalore": "BLR",
+      "Kolkata": "CCU",
+      "Hyderabad": "HYD",
+      "Ahmedabad": "AMD",
+      "Goa": "GOI",
+      "New Delhi": "DEL",
+      "Thiruvananthapuram": "TRV",
+      "Jaipur": "JAI",
+      "Lucknow": "LKO"
+    };
     
-    console.log('Making API request to SerpAPI for flight data  '+serpApiUrl);
+    // Attempt to convert city names to airport codes
+    if (airportCodes[origin]) origin = airportCodes[origin];
+    if (airportCodes[destination]) destination = airportCodes[destination];
+    
+    // Build SerpAPI URL
+    const serpApiUrl = `https://serpapi.com/search?engine=google_flights&departure_id=${encodeURIComponent(origin)}&arrival_id=${encodeURIComponent(destination)}&outbound_date=${params.departureDate}&return_date=${params.returnDate}&currency=${params.currency || 'INR'}&api_key=${apiKey}`;
+    
+    console.log('Making API request to SerpAPI for flight data');
     
     // Try the direct request first
     try {
       const response = await fetch(serpApiUrl);
-console.log(response);
-
       
       if (response.ok) {
         const data = await response.json();
@@ -74,6 +106,7 @@ console.log(response);
         const transformedData = transformSerpAPIResponse(data, params);
         
         // Cache the transformed data
+        cache[cacheKey] = { data: transformedData, timestamp: now };
         return transformedData;
       }
       
@@ -85,7 +118,48 @@ console.log(response);
       console.warn('Direct API call failed, trying CORS proxies');
       
       // Try each proxy in sequence
-
+      for (const proxy of CORS_PROXIES) {
+        try {
+          let proxiedUrl;
+          
+          if (proxy === 'https://cors.sh/') {
+            // Special handling for cors.sh which needs headers
+            console.log(`Trying CORS proxy: ${proxy}`);
+            const response = await fetch(`${proxy}${serpApiUrl}`, {
+              headers: {
+                'x-cors-api-key': 'temp_e50e8c5c2a5118d69991f120e',
+                'Content-Type': 'application/json'
+              }
+            });
+            
+            if (response.ok) {
+              const data = await response.json();
+              console.log(`CORS proxy ${proxy} successful`);
+              const transformedData = transformSerpAPIResponse(data, params);
+              cache[cacheKey] = { data: transformedData, timestamp: now };
+              return transformedData;
+            }
+          } else {
+            // Standard proxy format
+            proxiedUrl = `${proxy}${encodeURIComponent(serpApiUrl)}`;
+            console.log(`Trying CORS proxy: ${proxy}`);
+            
+            const response = await fetch(proxiedUrl);
+            
+            if (response.ok) {
+              const data = await response.json();
+              console.log(`CORS proxy ${proxy} successful`);
+              const transformedData = transformSerpAPIResponse(data, params);
+              cache[cacheKey] = { data: transformedData, timestamp: now };
+              return transformedData;
+            }
+          }
+        } catch (proxyError) {
+          console.warn(`CORS proxy ${proxy} failed:`, proxyError);
+          // Continue to next proxy on failure
+        }
+      }
+      
       // All proxies failed, throw an error to trigger sample data
       throw new Error('All CORS proxies failed');
     }
@@ -96,7 +170,6 @@ console.log(response);
     const fallbackData = getSampleFlightData(params);
     toast.error("Network error when fetching flights. Showing sample results instead.");
     
-    // Cache the fallback data
     return fallbackData;
   }
 };

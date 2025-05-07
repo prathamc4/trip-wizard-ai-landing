@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Calendar } from '@/components/ui/calendar';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -9,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CalendarIcon, Search, Loader, Map, Hotel, Users } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
 import SearchResults from '@/components/SearchResults';
 import { toast } from 'sonner';
@@ -120,12 +119,20 @@ const TravelPlanningSection = () => {
       return;
     }
     
+    // Fix for the date issue - ensure correct timezone handling
+    // Format dates for API in YYYY-MM-DD format without timezone issues
+    const formatDateForAPI = (date: Date | undefined): string => {
+      if (!date) return '';
+      // This will keep the date as selected without timezone adjustments
+      return format(date, 'yyyy-MM-dd');
+    };
+    
     // Store search data in session storage for components to access
     const searchData = {
       startLocation,
       destination,
-      startDate: startDate?.toISOString(),
-      endDate: endDate?.toISOString(),
+      startDate: startDate ? formatDateForAPI(startDate) : undefined,
+      endDate: endDate ? formatDateForAPI(endDate) : undefined,
       budget: budget[0],
       travelers: parseInt(travelers),
       preferences,
