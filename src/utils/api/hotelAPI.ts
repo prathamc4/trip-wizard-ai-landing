@@ -1,4 +1,5 @@
-import { toast } from 'sonner';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { toast } from "sonner";
 
 export interface HotelSearchParams {
   destination: string;
@@ -21,188 +22,191 @@ export interface HotelResult {
   images: string[];
 }
 
-// Cache mechanism to avoid redundant API calls
-const cache: Record<string, { data: HotelResult[], timestamp: number }> = {};
-const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
-
-export const fetchHotels = async (params: HotelSearchParams): Promise<HotelResult[]> => {
-  const cacheKey = JSON.stringify(params);
-  const now = Date.now();
-  
-  // Return cached data if available and not expired
-  if (cache[cacheKey] && now - cache[cacheKey].timestamp < CACHE_DURATION) {
-    console.log('Using cached hotel data');
-    return cache[cacheKey].data;
-  }
-
+export const fetchHotels = async (
+  params: HotelSearchParams
+): Promise<HotelResult[]> => {
   try {
-    console.log('Fetching hotel data with params:', params);
-    
+    console.log("Fetching hotel data with params:", params);
+
     // Get the API key from environment variables
     const apiKey = import.meta.env.VITE_SERPAPI_KEY;
     if (!apiKey) {
-      throw new Error('SerpAPI key not found in environment variables');
+      throw new Error("SerpAPI key not found in environment variables");
     }
-    
+
     // Use our backend server to avoid CORS issues
-    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
-    const apiUrl = `${backendUrl}/api/hotels?destination=${encodeURIComponent(params.destination)}&checkInDate=${params.checkInDate}&checkOutDate=${params.checkOutDate}&adults=${params.adults || 2}&currency=${params.currency || 'INR'}&key=${apiKey}`;
-    
-    console.log('Making API request to backend for hotel data');
-    
+    const backendUrl =
+      import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
+    const apiUrl = `${backendUrl}/api/hotels?destination=${encodeURIComponent(
+      params.destination
+    )}&checkInDate=${params.checkInDate}&checkOutDate=${
+      params.checkOutDate
+    }&adults=${params.adults || 2}&currency=${
+      params.currency || "INR"
+    }&key=${apiKey}`;
+
+    console.log("Making API request to backend for hotel data");
+
     // Make the request to our backend server
     const response = await fetch(apiUrl);
-    
+
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Backend API Error:', response.status, errorText);
+      console.error("Backend API Error:", response.status, errorText);
       throw new Error(`Backend API request failed: ${response.status}`);
     }
-    
+
     const data = await response.json();
-    console.log('Backend response received for hotels');
-    
+    console.log("Backend response received for hotels ", data);
+
     // Transform the API response to our format
     const transformedData = transformSerpAPIHotelResponse(data, params);
-    
+
     // Cache the transformed data
-    cache[cacheKey] = { data: transformedData, timestamp: now };
     return transformedData;
-    
   } catch (error) {
-    console.error('Error fetching hotel data:', error);
-    
+    console.error("Error fetching hotel data:", error);
+
     // Fall back to sample data on error
     const fallbackData = getSampleHotelData(params);
-    toast.error("Network error when fetching hotels. Showing sample results instead.");
-    toast('API Error: ' + error.message, {
-      description: 'Using sample data instead. Check console for details.'
+    toast.error(
+      "Network error when fetching hotels. Showing sample results instead."
+    );
+    toast("API Error: " + error.message, {
+      description: "Using sample data instead. Check console for details.",
     });
-    
-    // Cache the fallback data
-    cache[cacheKey] = { data: fallbackData, timestamp: now };
+
     return fallbackData;
   }
 };
 
 // Transform SerpAPI Google Hotels response to our format
-function transformSerpAPIHotelResponse(apiResponse: any, params: HotelSearchParams): HotelResult[] {
+function transformSerpAPIHotelResponse(
+  apiResponse: any,
+  params: HotelSearchParams
+): HotelResult[] {
   try {
-    // Check if we have hotel results
-    if (!apiResponse.hotels_results || !apiResponse.hotels_results.length) {
-      throw new Error('No hotel results found in SerpAPI response');
+    if (!apiResponse.properties) {
+      throw new Error("No hotel results found in SerpAPI response");
     }
-    
-    const hotels = apiResponse.hotels_results;
-    
+
+    const hotels = apiResponse.properties;
+
     return hotels.slice(0, 10).map((hotel: any, index: number) => {
-      // Extract images
-      const images = [];
-      if (hotel.thumbnail) {
-        images.push(hotel.thumbnail);
-      }
-      
-      if (hotel.photos && hotel.photos.length > 0) {
-        hotel.photos.slice(0, 4).forEach((photo: any) => {
-          if (photo.image) {
-            images.push(photo.image);
+      // Images
+      const images: string[] = [];
+
+      if (hotel.images && Array.isArray(hotel.images)) {
+        hotel.images.slice(0, 6).forEach((img: any) => {
+          if (img.original_image) {
+            images.push(img.original_image);
+          } else if (img.thumbnail) {
+            images.push(img.thumbnail);
           }
         });
       }
-      
-      // If no images are available, use placeholder
-      if (images.length === 0) {
-        images.push('https://images.unsplash.com/photo-1472396961693-142e6e269027?fit=crop&w=600&h=400');
-      }
-      
-      // Extract and normalize amenities
-      const hotelAmenities = [];
-      if (hotel.amenities) {
-        if (hotel.amenities.includes('Free Wi-Fi') || hotel.amenities.includes('Wi-Fi')) {
-          hotelAmenities.push('wifi');
-        }
-        if (hotel.amenities.includes('Parking') || hotel.amenities.includes('Free parking')) {
-          hotelAmenities.push('parking');
-        }
-        if (hotel.amenities.includes('Restaurant') || hotel.amenities.includes('Breakfast')) {
-          hotelAmenities.push('breakfast');
-        }
-        if (hotel.amenities.includes('Air conditioning')) {
-          hotelAmenities.push('ac');
-        }
-        if (hotel.amenities.includes('Pool') || hotel.amenities.includes('Swimming pool')) {
-          hotelAmenities.push('pool');
-        }
-        if (hotel.amenities.includes('Gym') || hotel.amenities.includes('Fitness center')) {
-          hotelAmenities.push('gym');
-        }
-      }
-      
-      // Ensure we have at least some amenities
-      if (hotelAmenities.length === 0) {
-        const hasAC = Math.random() > 0.2;
-        const hasWifi = Math.random() > 0.1;
-        
-        if (hasWifi) hotelAmenities.push('wifi');
-        if (hasAC) hotelAmenities.push('ac');
-      }
-      
-      // Determine vegetarian-friendliness
-      const isVegFriendly = hotel.amenities?.includes('Vegetarian meals') || 
-                           hotel.description?.toLowerCase().includes('vegetarian') || 
-                           Math.random() > 0.3; // More likely in India
-      
-      // Calculate or estimate distance from nearest station
-      const distanceKm = hotel.distance_from_center ? 
-                         parseFloat(hotel.distance_from_center.replace(/[^\d.]/g, '')) : 
-                         (Math.random() * 6 + 0.5).toFixed(1);
-                         
-      const stationType = Math.random() > 0.5 ? "Railway Station" : "Metro Station";
-      const nearestStation = `${distanceKm} km from nearest ${stationType}`;
-      
-      // Extract or generate description
-      const description = hotel.description || 
-                        hotel.overview || 
-                        `${hotel.name} offers comfortable accommodation in ${params.destination} with modern amenities and excellent service.`;
 
-      // Determine rating (out of 5)
-      let rating = hotel.rating || 0;
-      if (typeof rating === 'string') {
-        rating = parseFloat(rating);
+      // Fallback image only if no real images are available
+      if (images.length === 0) {
+        images.push(
+          "https://images.unsplash.com/photo-1472396961693-142e6e269027?fit=crop&w=600&h=400"
+        );
       }
-      // If rating is out of 10, convert to out of 5
-      if (rating > 5) {
-        rating = rating / 2;
+      console.log(hotel.images);
+
+      // Amenities
+      const rawAmenities = hotel.amenities || [];
+      const amenities = [
+        rawAmenities.includes("Free Wi-Fi") || rawAmenities.includes("Wi-Fi")
+          ? "wifi"
+          : null,
+        rawAmenities.includes("Free parking") ||
+        rawAmenities.includes("Parking")
+          ? "parking"
+          : null,
+        rawAmenities.some(
+          (a) =>
+            a.toLowerCase().includes("breakfast") ||
+            a.toLowerCase().includes("restaurant")
+        )
+          ? "breakfast"
+          : null,
+        rawAmenities.includes("Air conditioning") ? "ac" : null,
+        rawAmenities.some((a) => a.toLowerCase().includes("pool"))
+          ? "pool"
+          : null,
+        rawAmenities.includes("Gym") || rawAmenities.includes("Fitness center")
+          ? "gym"
+          : null,
+      ].filter(Boolean);
+
+      if (amenities.length === 0) {
+        if (Math.random() > 0.2) amenities.push("wifi");
+        if (Math.random() > 0.4) amenities.push("ac");
       }
-      // If no rating, generate a realistic one
-      if (!rating) {
-        rating = Math.floor(Math.random() * 2) + 3;
-      }
+
+      // Vegetarian friendly
+      const isVegFriendly =
+        rawAmenities.includes("Vegetarian meals") ||
+        hotel.description?.toLowerCase().includes("vegetarian") ||
+        Math.random() > 0.3;
+
+      // Distance
+      const distanceKm = hotel.distance_from_center
+        ? parseFloat(hotel.distance_from_center.replace(/[^\d.]/g, ""))
+        : (Math.random() * 6 + 0.5).toFixed(1);
+
+      const stationType =
+        Math.random() > 0.5 ? "Railway Station" : "Metro Station";
+      const nearestStation = `${distanceKm} km from nearest ${stationType}`;
+
+      // Rating
+      let rating = hotel.overall_rating || hotel.rating || 0;
+      if (typeof rating === "string") rating = parseFloat(rating);
+      if (rating > 5) rating = rating / 2;
+      if (!rating) rating = Math.floor(Math.random() * 2) + 3;
+
+      // Price
+      const priceString =
+        hotel.rate_per_night?.lowest || hotel.total_rate?.lowest;
+      const price = priceString
+        ? parseInt(priceString.replace(/[^\d]/g, ""))
+        : 2000 + Math.floor(Math.random() * 8000);
 
       return {
         id: index + 1,
         name: hotel.name || `Hotel ${index + 1}`,
-        rating: rating,
-        price: hotel.price || 2000 + Math.floor(Math.random() * 20000),
+        rating,
+        price,
         address: hotel.address || `${params.destination}, India`,
-        amenities: hotelAmenities,
+        amenities,
         vegetarianFriendly: isVegFriendly,
         distanceFromStation: nearestStation,
-        description: description,
-        images: images
+        description:
+          hotel.description ||
+          hotel.deal_description ||
+          `Great stay at ${params.destination}.`,
+        images,
+        link: hotel.link || hotel.serpapi_property_details_link || "",
       };
     });
   } catch (error) {
-    console.error('Error transforming hotel data:', error);
+    console.error("Error transforming hotel data:", error);
     return getSampleHotelData(params);
   }
 }
 
 // Sample data as fallback - enhanced with destination-specific data
-function getSampleHotelData(params: HotelSearchParams = {destination: 'New Delhi', checkInDate: '2025-05-15', checkOutDate: '2025-05-18'}): HotelResult[] {
+function getSampleHotelData(
+  params: HotelSearchParams = {
+    destination: "New Delhi",
+    checkInDate: "2025-05-15",
+    checkOutDate: "2025-05-18",
+  }
+): HotelResult[] {
   // Extract destination to provide more relevant sample data
-  const destination = params.destination || 'New Delhi';
-  
+  const destination = params.destination || "New Delhi";
+
   return [
     {
       id: 1,
@@ -210,15 +214,15 @@ function getSampleHotelData(params: HotelSearchParams = {destination: 'New Delhi
       rating: 5,
       price: 12500,
       address: `Downtown, ${destination}, India`,
-      amenities: ['wifi', 'parking', 'breakfast', 'ac', 'pool', 'gym'],
+      amenities: ["wifi", "parking", "breakfast", "ac", "pool", "gym"],
       vegetarianFriendly: true,
       distanceFromStation: `4.5 km from ${destination} Railway Station`,
       description: `Luxury 5-star hotel in ${destination} with elegant rooms, multiple dining options, and excellent service.`,
       images: [
-        'https://images.unsplash.com/photo-1472396961693-142e6e269027?fit=crop&w=600&h=400',
-        'https://images.unsplash.com/photo-1482938289607-e9573fc25ebb?fit=crop&w=600&h=400',
-        'https://images.unsplash.com/photo-1500375592092-40eb2168fd21?fit=crop&w=600&h=400'
-      ]
+        "https://images.unsplash.com/photo-1472396961693-142e6e269027?fit=crop&w=600&h=400",
+        "https://images.unsplash.com/photo-1482938289607-e9573fc25ebb?fit=crop&w=600&h=400",
+        "https://images.unsplash.com/photo-1500375592092-40eb2168fd21?fit=crop&w=600&h=400",
+      ],
     },
     {
       id: 2,
@@ -226,15 +230,15 @@ function getSampleHotelData(params: HotelSearchParams = {destination: 'New Delhi
       rating: 3,
       price: 2299,
       address: `Central Area, ${destination}, India`,
-      amenities: ['wifi', 'ac', 'breakfast'],
+      amenities: ["wifi", "ac", "breakfast"],
       vegetarianFriendly: true,
       distanceFromStation: `1.2 km from ${destination} Metro Station`,
       description: `Budget-friendly hotel in ${destination} with clean rooms and essential amenities for travelers.`,
       images: [
-        'https://images.unsplash.com/photo-1500375592092-40eb2168fd21?fit=crop&w=600&h=400',
-        'https://images.unsplash.com/photo-1482938289607-e9573fc25ebb?fit=crop&w=600&h=400',
-        'https://images.unsplash.com/photo-1472396961693-142e6e269027?fit=crop&w=600&h=400'
-      ]
+        "https://images.unsplash.com/photo-1500375592092-40eb2168fd21?fit=crop&w=600&h=400",
+        "https://images.unsplash.com/photo-1482938289607-e9573fc25ebb?fit=crop&w=600&h=400",
+        "https://images.unsplash.com/photo-1472396961693-142e6e269027?fit=crop&w=600&h=400",
+      ],
     },
     {
       id: 3,
@@ -242,15 +246,15 @@ function getSampleHotelData(params: HotelSearchParams = {destination: 'New Delhi
       rating: 5,
       price: 18500,
       address: `Diplomatic Area, ${destination}, India`,
-      amenities: ['wifi', 'parking', 'breakfast', 'ac', 'pool', 'spa', 'gym'],
+      amenities: ["wifi", "parking", "breakfast", "ac", "pool", "spa", "gym"],
       vegetarianFriendly: true,
       distanceFromStation: `7 km from ${destination} Railway Station`,
       description: `Opulent 5-star hotel in ${destination} with royal decor, world-class dining, and impeccable service.`,
       images: [
-        'https://images.unsplash.com/photo-1469041797191-50ace28483c3?fit=crop&w=600&h=400',
-        'https://images.unsplash.com/photo-1518877593221-1f28583780b4?fit=crop&w=600&h=400',
-        'https://images.unsplash.com/photo-1472396961693-142e6e269027?fit=crop&w=600&h=400'
-      ]
+        "https://images.unsplash.com/photo-1469041797191-50ace28483c3?fit=crop&w=600&h=400",
+        "https://images.unsplash.com/photo-1518877593221-1f28583780b4?fit=crop&w=600&h=400",
+        "https://images.unsplash.com/photo-1472396961693-142e6e269027?fit=crop&w=600&h=400",
+      ],
     },
     {
       id: 4,
@@ -258,15 +262,15 @@ function getSampleHotelData(params: HotelSearchParams = {destination: 'New Delhi
       rating: 3,
       price: 1899,
       address: `Near Market, ${destination}, India`,
-      amenities: ['wifi', 'ac'],
+      amenities: ["wifi", "ac"],
       vegetarianFriendly: true,
       distanceFromStation: `0.5 km from ${destination} Railway Station`,
       description: `Convenient budget hotel close to the railway station in ${destination} with basic amenities.`,
       images: [
-        'https://images.unsplash.com/photo-1518877593221-1f28583780b4?fit=crop&w=600&h=400',
-        'https://images.unsplash.com/photo-1469041797191-50ace28483c3?fit=crop&w=600&h=400',
-        'https://images.unsplash.com/photo-1472396961693-142e6e269027?fit=crop&w=600&h=400'
-      ]
-    }
+        "https://images.unsplash.com/photo-1518877593221-1f28583780b4?fit=crop&w=600&h=400",
+        "https://images.unsplash.com/photo-1469041797191-50ace28483c3?fit=crop&w=600&h=400",
+        "https://images.unsplash.com/photo-1472396961693-142e6e269027?fit=crop&w=600&h=400",
+      ],
+    },
   ];
 }
