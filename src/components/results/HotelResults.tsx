@@ -1,21 +1,43 @@
-
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Carousel, CarouselContent, CarouselItem, CarouselPrevious, CarouselNext } from '@/components/ui/carousel';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Slider } from '@/components/ui/slider';
-import { Star, Wifi, MapPin, Heart, Car, Coffee, Leaf, Fan, IndianRupee, Loader } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { fetchHotels, HotelResult } from '@/utils/api';
-import { toast } from 'sonner';
-import { Skeleton } from '@/components/ui/skeleton';
+import React, { useState, useEffect } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselPrevious,
+  CarouselNext,
+} from "@/components/ui/carousel";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Slider } from "@/components/ui/slider";
+import {
+  Star,
+  Wifi,
+  MapPin,
+  Heart,
+  Car,
+  Coffee,
+  Leaf,
+  Fan,
+  IndianRupee,
+  Loader,
+} from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { fetchHotels, HotelResult } from "@/utils/api";
+import { toast } from "sonner";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const HotelResults: React.FC = () => {
   const [priceRange, setPriceRange] = useState<number[]>([1000, 20000]);
-  const [starFilter, setStarFilter] = useState('all');
-  const [vegFilter, setVegFilter] = useState('all');
-  const [acFilter, setAcFilter] = useState('all');
+  const [starFilter, setStarFilter] = useState("all");
+  const [vegFilter, setVegFilter] = useState("all");
+  const [acFilter, setAcFilter] = useState("all");
   const [savedHotels, setSavedHotels] = useState<number[]>([]);
   const [hotels, setHotels] = useState<HotelResult[]>([]);
   const [loading, setLoading] = useState(true);
@@ -28,23 +50,23 @@ const HotelResults: React.FC = () => {
         setError(null);
 
         // Retrieve search params from session storage or use defaults
-        const searchData = sessionStorage.getItem('travelSearchData');
-        let destination = 'New Delhi';
-        let checkInDate = '2025-05-15';
-        let checkOutDate = '2025-05-18';
+        const searchData = sessionStorage.getItem("travelSearchData");
+        let destination = "New Delhi";
+        let checkInDate = "2025-05-15";
+        let checkOutDate = "2025-05-18";
 
         if (searchData) {
           const parsedData = JSON.parse(searchData);
           destination = parsedData.destination || destination;
-          
+
           if (parsedData.startDate) {
             const startDate = new Date(parsedData.startDate);
-            checkInDate = startDate.toISOString().split('T')[0];
+            checkInDate = startDate.toISOString().split("T")[0];
           }
-          
+
           if (parsedData.endDate) {
             const endDate = new Date(parsedData.endDate);
-            checkOutDate = endDate.toISOString().split('T')[0];
+            checkOutDate = endDate.toISOString().split("T")[0];
           }
         }
 
@@ -54,22 +76,22 @@ const HotelResults: React.FC = () => {
           checkInDate,
           checkOutDate,
           adults: 1,
-          currency: 'INR'
+          currency: "INR",
         });
 
         setHotels(hotelResults);
-        
+
         // Update price range based on available hotels
         if (hotelResults.length > 0) {
-          const prices = hotelResults.map(hotel => hotel.price);
+          const prices = hotelResults.map((hotel) => hotel.price);
           const minPrice = Math.floor(Math.min(...prices) / 500) * 500; // Round to lower 500
-          const maxPrice = Math.ceil(Math.max(...prices) / 500) * 500;  // Round to upper 500
+          const maxPrice = Math.ceil(Math.max(...prices) / 500) * 500; // Round to upper 500
           setPriceRange([minPrice, maxPrice]);
         }
       } catch (err) {
-        console.error('Error fetching hotels:', err);
-        setError('Failed to load hotel data. Please try again later.');
-        toast.error('Could not load hotel data');
+        console.error("Error fetching hotels:", err);
+        setError("Failed to load hotel data. Please try again later.");
+        toast.error("Could not load hotel data");
       } finally {
         setLoading(false);
       }
@@ -79,45 +101,54 @@ const HotelResults: React.FC = () => {
   }, []);
 
   const handleSaveToggle = (hotelId: number) => {
-    setSavedHotels(prev => 
-      prev.includes(hotelId) 
-        ? prev.filter(id => id !== hotelId)
+    setSavedHotels((prev) =>
+      prev.includes(hotelId)
+        ? prev.filter((id) => id !== hotelId)
         : [...prev, hotelId]
     );
 
     if (!savedHotels.includes(hotelId)) {
-      toast.success('Hotel saved to favorites!');
+      toast.success("Hotel saved to favorites!");
     }
   };
 
   // Filter hotels
-  const filteredHotels = hotels.filter(hotel => {
-    const matchesPrice = hotel.price >= priceRange[0] && hotel.price <= priceRange[1];
-    
-    const matchesStars = starFilter === 'all' || 
-      (starFilter === '3plus' && hotel.rating >= 3) ||
-      (starFilter === '4plus' && hotel.rating >= 4) ||
-      (starFilter === '5only' && hotel.rating === 5);
-    
-    const matchesVeg = vegFilter === 'all' || 
-      (vegFilter === 'veg' && hotel.vegetarianFriendly);
-    
-    const matchesAC = acFilter === 'all' || 
-      (acFilter === 'ac' && hotel.amenities.includes('ac')) || 
-      (acFilter === 'nonac' && !hotel.amenities.includes('ac'));
-    
+  const filteredHotels = hotels.filter((hotel) => {
+    const matchesPrice =
+      hotel.price >= priceRange[0] && hotel.price <= priceRange[1];
+
+    const matchesStars =
+      starFilter === "all" ||
+      (starFilter === "3plus" && hotel.rating >= 3) ||
+      (starFilter === "4plus" && hotel.rating >= 4) ||
+      (starFilter === "5only" && hotel.rating === 5);
+
+    const matchesVeg =
+      vegFilter === "all" || (vegFilter === "veg" && hotel.vegetarianFriendly);
+
+    const matchesAC =
+      acFilter === "all" ||
+      (acFilter === "ac" && hotel.amenities.includes("ac")) ||
+      (acFilter === "nonac" && !hotel.amenities.includes("ac"));
+
     return matchesPrice && matchesStars && matchesVeg && matchesAC;
   });
 
   // Helper for rendering amenity icons
   const getAmenityIcon = (amenity: string) => {
-    switch(amenity) {
-      case 'wifi': return <Wifi className="h-4 w-4" />;
-      case 'parking': return <Car className="h-4 w-4" />;
-      case 'breakfast': return <Coffee className="h-4 w-4" />;
-      case 'ac': return <Fan className="h-4 w-4" />;
-      case 'veg': return <Leaf className="h-4 w-4 text-green-500" />;
-      default: return null;
+    switch (amenity) {
+      case "wifi":
+        return <Wifi className="h-4 w-4" />;
+      case "parking":
+        return <Car className="h-4 w-4" />;
+      case "breakfast":
+        return <Coffee className="h-4 w-4" />;
+      case "ac":
+        return <Fan className="h-4 w-4" />;
+      case "veg":
+        return <Leaf className="h-4 w-4 text-green-500" />;
+      default:
+        return null;
     }
   };
 
@@ -126,11 +157,16 @@ const HotelResults: React.FC = () => {
     const stars = [];
     const fullStars = Math.floor(rating);
     const hasHalfStar = rating % 1 !== 0;
-    
+
     for (let i = 0; i < fullStars; i++) {
-      stars.push(<Star key={`star-${i}`} className="w-4 h-4 fill-yellow-400 text-yellow-400" />);
+      stars.push(
+        <Star
+          key={`star-${i}`}
+          className="w-4 h-4 fill-yellow-400 text-yellow-400"
+        />
+      );
     }
-    
+
     if (hasHalfStar) {
       stars.push(
         <div key="half-star" className="relative w-4 h-4">
@@ -141,11 +177,13 @@ const HotelResults: React.FC = () => {
         </div>
       );
     }
-    
+
     for (let i = stars.length; i < 5; i++) {
-      stars.push(<Star key={`empty-${i}`} className="w-4 h-4 text-yellow-400" />);
+      stars.push(
+        <Star key={`empty-${i}`} className="w-4 h-4 text-yellow-400" />
+      );
     }
-    
+
     return stars;
   };
 
@@ -159,7 +197,7 @@ const HotelResults: React.FC = () => {
           <Skeleton className="h-10 w-44" />
           <Skeleton className="h-10 w-44" />
         </div>
-        
+
         {[1, 2, 3].map((i) => (
           <Skeleton key={i} className="h-72 w-full rounded-lg" />
         ))}
@@ -183,9 +221,9 @@ const HotelResults: React.FC = () => {
         {/* Price range filter */}
         <div className="space-y-2 w-full md:w-64">
           <label className="text-sm font-medium">Price range (₹)</label>
-          <Slider 
-            min={500} 
-            max={25000} 
+          <Slider
+            min={500}
+            max={25000}
             step={500}
             value={priceRange}
             onValueChange={setPriceRange}
@@ -212,7 +250,7 @@ const HotelResults: React.FC = () => {
             </SelectContent>
           </Select>
         </div>
-        
+
         {/* Vegetarian filter */}
         <div className="space-y-2">
           <label className="text-sm font-medium">Dining Options</label>
@@ -226,7 +264,7 @@ const HotelResults: React.FC = () => {
             </SelectContent>
           </Select>
         </div>
-        
+
         {/* AC/Non-AC filter */}
         <div className="space-y-2">
           <label className="text-sm font-medium">Room Type</label>
@@ -245,20 +283,22 @@ const HotelResults: React.FC = () => {
 
       {filteredHotels.length === 0 ? (
         <div className="text-center py-8">
-          <p className="text-muted-foreground">No hotels match your current filters.</p>
-          <Button 
-            variant="outline" 
+          <p className="text-muted-foreground">
+            No hotels match your current filters.
+          </p>
+          <Button
+            variant="outline"
             className="mt-4"
             onClick={() => {
-              setStarFilter('all');
-              setVegFilter('all');
-              setAcFilter('all');
+              setStarFilter("all");
+              setVegFilter("all");
+              setAcFilter("all");
               // Reset price range to initial values
-              const prices = hotels.map(hotel => hotel.price);
+              const prices = hotels.map((hotel) => hotel.price);
               if (prices.length > 0) {
                 setPriceRange([
                   Math.floor(Math.min(...prices) / 500) * 500,
-                  Math.ceil(Math.max(...prices) / 500) * 500
+                  Math.ceil(Math.max(...prices) / 500) * 500,
                 ]);
               }
             }}
@@ -269,7 +309,10 @@ const HotelResults: React.FC = () => {
       ) : (
         <div className="grid grid-cols-1 gap-6">
           {filteredHotels.map((hotel) => (
-            <Card key={hotel.id} className="overflow-hidden hover:shadow-md transition-all duration-200">
+            <Card
+              key={hotel.id}
+              className="overflow-hidden hover:shadow-md transition-all duration-200"
+            >
               <CardContent className="p-0">
                 <div className="grid md:grid-cols-3 gap-2">
                   {/* Hotel image carousel */}
@@ -279,13 +322,14 @@ const HotelResults: React.FC = () => {
                         {hotel.images.map((image, index) => (
                           <CarouselItem key={index}>
                             <div className="h-52 md:h-full min-h-40 relative">
-                              <img 
-                                src={image} 
-                                alt={`${hotel.name} - image ${index+1}`}
+                              <img
+                                src={image}
+                                alt={`${hotel.name} - image ${index + 1}`}
                                 className="absolute inset-0 w-full h-full object-cover"
                                 onError={(e) => {
                                   (e.target as HTMLImageElement).onerror = null;
-                                  (e.target as HTMLImageElement).src = 'https://placehold.co/600x400/e2e8f0/a0aec0?text=Hotel+Image';
+                                  (e.target as HTMLImageElement).src =
+                                    "https://placehold.co/600x400/e2e8f0/a0aec0?text=Hotel+Image";
                                 }}
                               />
                             </div>
@@ -296,24 +340,30 @@ const HotelResults: React.FC = () => {
                       <CarouselNext className="right-2" />
                     </Carousel>
                   </div>
-                  
+
                   {/* Hotel details */}
                   <div className="p-4 md:col-span-2">
                     <div className="flex justify-between mb-2">
                       <h3 className="text-xl font-bold">{hotel.name}</h3>
-                      <Button 
-                        variant="ghost" 
+                      <Button
+                        variant="ghost"
                         size="icon"
                         onClick={() => handleSaveToggle(hotel.id)}
                         className="relative"
                       >
-                        <Heart className={`h-5 w-5 ${savedHotels.includes(hotel.id) ? 'fill-pink-500 text-pink-500' : ''}`} />
-                        {savedHotels.includes(hotel.id) && 
+                        <Heart
+                          className={`h-5 w-5 ${
+                            savedHotels.includes(hotel.id)
+                              ? "fill-pink-500 text-pink-500"
+                              : ""
+                          }`}
+                        />
+                        {savedHotels.includes(hotel.id) && (
                           <span className="absolute -top-1 -right-1 flex h-3 w-3">
                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-400 opacity-75"></span>
                             <span className="relative inline-flex rounded-full h-3 w-3 bg-pink-500"></span>
                           </span>
-                        }
+                        )}
                       </Button>
                     </div>
 
@@ -321,46 +371,54 @@ const HotelResults: React.FC = () => {
                       {renderStars(hotel.rating)}
                       <span className="text-sm ml-2">{hotel.rating} stars</span>
                     </div>
-                    
+
                     <div className="flex items-center text-sm text-muted-foreground mb-3">
                       <MapPin className="h-4 w-4 mr-1" />
                       {hotel.address}
                     </div>
-                    
+
                     <div className="text-sm text-blue-600 mb-3">
                       {hotel.distanceFromStation}
                     </div>
-                    
+
                     <p className="text-sm mb-4">{hotel.description}</p>
-                    
+
                     <div className="flex flex-wrap gap-2 mb-4">
                       {hotel.amenities.map((amenity) => (
-                        <div key={amenity} className="flex items-center bg-muted px-2 py-1 rounded text-xs">
+                        <div
+                          key={amenity}
+                          className="flex items-center bg-muted px-2 py-1 rounded text-xs"
+                        >
                           {getAmenityIcon(amenity)}
                           <span className="ml-1 capitalize">{amenity}</span>
                         </div>
                       ))}
                       {hotel.vegetarianFriendly && (
-                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                        <Badge
+                          variant="outline"
+                          className="bg-green-50 text-green-700 border-green-200"
+                        >
                           <Leaf className="h-3 w-3 mr-1" />
                           Veg Friendly
                         </Badge>
                       )}
                     </div>
-                    
+
                     <div className="flex flex-wrap justify-between items-center mt-auto pt-2 border-t">
                       <div>
                         <div className="flex items-baseline">
                           <IndianRupee className="h-4 w-4 mr-1" />
-                          <span className="text-2xl font-bold">{hotel.price.toLocaleString()}</span>
+                          <span className="text-2xl font-bold">
+                            {hotel.price.toLocaleString()}
+                          </span>
                           <span className="text-sm ml-1">per night</span>
                         </div>
-                        <p className="text-xs text-muted-foreground">GST & fees included</p>
+                        <p className="text-xs text-muted-foreground">
+                          GST & fees included
+                        </p>
                       </div>
-                      
-                      <Button className="mt-2 sm:mt-0">
-                        Book Now
-                      </Button>
+
+                      <Button className="mt-2 sm:mt-0">Book Now</Button>
                     </div>
                   </div>
                 </div>
