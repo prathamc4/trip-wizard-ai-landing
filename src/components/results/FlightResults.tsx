@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,11 +18,13 @@ import {
   ArrowRight,
   Briefcase,
   IndianRupee,
+  Check,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { fetchFlights, FlightResult } from "@/utils/api";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useSelection } from "@/context/SelectionContext";
 
 const FlightResults: React.FC = () => {
   const [sortBy, setSortBy] = useState("price");
@@ -32,6 +35,7 @@ const FlightResults: React.FC = () => {
   const [airlines, setAirlines] = useState<string[]>(["all"]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { selectedFlight, selectFlight } = useSelection();
 
   useEffect(() => {
     const loadFlights = async () => {
@@ -104,6 +108,14 @@ const FlightResults: React.FC = () => {
     if (!savedFlights.includes(flightId)) {
       toast.success("Flight saved to favorites!");
     }
+  };
+
+  const handleSelectFlight = (flight: FlightResult) => {
+    selectFlight(flight);
+  };
+
+  const isSelected = (flight: FlightResult) => {
+    return selectedFlight?.id === flight.id;
   };
 
   // Sort flights based on selected option
@@ -210,134 +222,153 @@ const FlightResults: React.FC = () => {
         </div>
       ) : (
         <div className="space-y-4">
-          {filteredFlights.map((flight) => (
-            <Card
-              key={flight.id}
-              className="overflow-hidden hover:shadow-md transition-all duration-200"
-            >
-              <CardContent className="p-0">
-                <div className="p-4 flex justify-between items-center">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center">
-                      {flight.logo ? (
-                        <img
-                          src={flight.logo}
-                          alt={flight.airline}
-                          className="w-full h-full object-contain"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).onerror = null;
-                            (e.target as HTMLImageElement).src =
-                              "https://placehold.co/40x40/e2e8f0/a0aec0?text=✈";
-                          }}
-                        />
-                      ) : (
-                        <Plane className="h-5 w-5 text-muted-foreground" />
-                      )}
-                    </div>
-                    <div>
-                      <p className="font-medium">{flight.airline}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {flight.flightNumber}
-                      </p>
-                    </div>
-                  </div>
-
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleSaveToggle(flight.id)}
-                    className="relative transition-all duration-300"
-                  >
-                    <Heart
-                      className={`h-5 w-5 ${
-                        savedFlights.includes(flight.id)
-                          ? "fill-pink-500 text-pink-500"
-                          : ""
-                      }`}
-                    />
-                    {savedFlights.includes(flight.id) && (
-                      <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-3 w-3 bg-pink-500"></span>
-                      </span>
-                    )}
-                  </Button>
-                </div>
-
-                <div className="px-4 py-3 bg-muted/30 flex flex-wrap sm:flex-nowrap justify-between items-center gap-x-4 gap-y-2">
-                  <div className="flex items-center gap-3">
-                    <div className="text-right">
-                      <p className="font-semibold text-lg">
-                        {flight.departureTime}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {flight.departureAirport}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {flight.departureCity}
-                      </p>
-                    </div>
-
-                    <div className="flex flex-col items-center">
-                      <div className="relative w-20 sm:w-28 md:w-36">
-                        <div className="absolute w-full top-1/2 h-0.5 bg-gray-300"></div>
-                        <Plane className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 w-4 h-4 text-muted-foreground" />
-                        <ArrowRight className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1 w-4 h-4 text-muted-foreground" />
+          {filteredFlights.map((flight) => {
+            const flightSelected = isSelected(flight);
+            
+            return (
+              <Card
+                key={flight.id}
+                className={`overflow-hidden hover:shadow-md transition-all duration-200 ${
+                  flightSelected ? "ring-2 ring-travel-green" : ""
+                }`}
+              >
+                <CardContent className="p-0">
+                  <div className="p-4 flex justify-between items-center">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center">
+                        {flight.logo ? (
+                          <img
+                            src={flight.logo}
+                            alt={flight.airline}
+                            className="w-full h-full object-contain"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).onerror = null;
+                              (e.target as HTMLImageElement).src =
+                                "https://placehold.co/40x40/e2e8f0/a0aec0?text=✈";
+                            }}
+                          />
+                        ) : (
+                          <Plane className="h-5 w-5 text-muted-foreground" />
+                        )}
                       </div>
-                      <span className="text-xs text-muted-foreground mt-1.5">
-                        {flight.duration}
-                      </span>
+                      <div>
+                        <p className="font-medium">{flight.airline}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {flight.flightNumber}
+                        </p>
+                      </div>
                     </div>
 
-                    <div>
-                      <p className="font-semibold text-lg">
-                        {flight.arrivalTime}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {flight.arrivalAirport}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {flight.arrivalCity}
-                      </p>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleSaveToggle(flight.id)}
+                      className="relative transition-all duration-300"
+                    >
+                      <Heart
+                        className={`h-5 w-5 ${
+                          savedFlights.includes(flight.id)
+                            ? "fill-pink-500 text-pink-500"
+                            : ""
+                        }`}
+                      />
+                      {savedFlights.includes(flight.id) && (
+                        <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-3 w-3 bg-pink-500"></span>
+                        </span>
+                      )}
+                    </Button>
+                  </div>
+
+                  <div className="px-4 py-3 bg-muted/30 flex flex-wrap sm:flex-nowrap justify-between items-center gap-x-4 gap-y-2">
+                    <div className="flex items-center gap-3">
+                      <div className="text-right">
+                        <p className="font-semibold text-lg">
+                          {flight.departureTime}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {flight.departureAirport}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {flight.departureCity}
+                        </p>
+                      </div>
+
+                      <div className="flex flex-col items-center">
+                        <div className="relative w-20 sm:w-28 md:w-36">
+                          <div className="absolute w-full top-1/2 h-0.5 bg-gray-300"></div>
+                          <Plane className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 w-4 h-4 text-muted-foreground" />
+                          <ArrowRight className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1 w-4 h-4 text-muted-foreground" />
+                        </div>
+                        <span className="text-xs text-muted-foreground mt-1.5">
+                          {flight.duration}
+                        </span>
+                      </div>
+
+                      <div>
+                        <p className="font-semibold text-lg">
+                          {flight.arrivalTime}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {flight.arrivalAirport}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {flight.arrivalCity}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between items-center gap-4 w-full sm:w-auto">
+                      <div className="flex items-baseline">
+                        <IndianRupee className="h-4 w-4 mr-1" />
+                        <span className="text-2xl font-bold">
+                          {flight.price.toLocaleString()}
+                        </span>
+                      </div>
+
+                      <Button 
+                        className={`ml-auto ${
+                          flightSelected ? "bg-green-600 hover:bg-green-700" : ""
+                        }`}
+                        onClick={() => handleSelectFlight(flight)}
+                      >
+                        {flightSelected ? (
+                          <>
+                            <Check className="mr-1 h-4 w-4" /> Selected
+                          </>
+                        ) : (
+                          "Select Flight"
+                        )}
+                      </Button>
                     </div>
                   </div>
 
-                  <div className="flex justify-between items-center gap-4 w-full sm:w-auto">
-                    <div className="flex items-baseline">
-                      <IndianRupee className="h-4 w-4 mr-1" />
-                      <span className="text-2xl font-bold">
-                        {flight.price.toLocaleString()}
-                      </span>
+                  <div className="px-4 py-2 text-xs flex flex-wrap gap-x-4 gap-y-2">
+                    <div className="flex items-center gap-1">
+                      <Calendar className="h-3.5 w-3.5" />
+                      {new Date().toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
                     </div>
-
-                    <Button className="ml-auto">Select Flight</Button>
+                    <div className="flex items-center gap-1">
+                      <Briefcase className="h-3.5 w-3.5" />
+                      Baggage: {flight.baggageAllowance}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {flight.amenities.map((amenity, index) => (
+                        <Badge key={index} variant="outline" className="bg-white">
+                          {amenity}
+                        </Badge>
+                      ))}
+                    </div>
                   </div>
-                </div>
-
-                <div className="px-4 py-2 text-xs flex flex-wrap gap-x-4 gap-y-2">
-                  <div className="flex items-center gap-1">
-                    <Calendar className="h-3.5 w-3.5" />
-                    {new Date().toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                    })}
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Briefcase className="h-3.5 w-3.5" />
-                    Baggage: {flight.baggageAllowance}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {flight.amenities.map((amenity, index) => (
-                      <Badge key={index} variant="outline" className="bg-white">
-                        {amenity}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
     </div>

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -27,11 +28,13 @@ import {
   Fan,
   IndianRupee,
   Loader,
+  Check,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { fetchHotels, HotelResult } from "@/utils/api";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useSelection } from "@/context/SelectionContext";
 
 const HotelResults: React.FC = () => {
   const [priceRange, setPriceRange] = useState<number[]>([1000, 20000]);
@@ -42,6 +45,7 @@ const HotelResults: React.FC = () => {
   const [hotels, setHotels] = useState<HotelResult[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { selectedHotel, selectHotel } = useSelection();
 
   useEffect(() => {
     const loadHotels = async () => {
@@ -110,6 +114,14 @@ const HotelResults: React.FC = () => {
     if (!savedHotels.includes(hotelId)) {
       toast.success("Hotel saved to favorites!");
     }
+  };
+
+  const handleSelectHotel = (hotel: HotelResult) => {
+    selectHotel(hotel);
+  };
+
+  const isSelected = (hotel: HotelResult) => {
+    return selectedHotel?.id === hotel.id;
   };
 
   // Filter hotels
@@ -308,123 +320,142 @@ const HotelResults: React.FC = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-6">
-          {filteredHotels.map((hotel) => (
-            <Card
-              key={hotel.id}
-              className="overflow-hidden hover:shadow-md transition-all duration-200"
-            >
-              <CardContent className="p-0">
-                <div className="grid md:grid-cols-3 gap-2">
-                  {/* Hotel image carousel */}
-                  <div className="md:col-span-1">
-                    <Carousel className="w-full">
-                      <CarouselContent>
-                        {hotel.images.map((image, index) => (
-                          <CarouselItem key={index}>
-                            <div className="h-52 md:h-full min-h-40 relative">
-                              <img
-                                src={image}
-                                alt={`${hotel.name} - image ${index + 1}`}
-                                className="absolute inset-0 w-full h-full object-cover"
-                                onError={(e) => {
-                                  (e.target as HTMLImageElement).onerror = null;
-                                  (e.target as HTMLImageElement).src =
-                                    "https://placehold.co/600x400/e2e8f0/a0aec0?text=Hotel+Image";
-                                }}
-                              />
-                            </div>
-                          </CarouselItem>
-                        ))}
-                      </CarouselContent>
-                      <CarouselPrevious className="left-2" />
-                      <CarouselNext className="right-2" />
-                    </Carousel>
-                  </div>
-
-                  {/* Hotel details */}
-                  <div className="p-4 md:col-span-2">
-                    <div className="flex justify-between mb-2">
-                      <h3 className="text-xl font-bold">{hotel.name}</h3>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleSaveToggle(hotel.id)}
-                        className="relative"
-                      >
-                        <Heart
-                          className={`h-5 w-5 ${
-                            savedHotels.includes(hotel.id)
-                              ? "fill-pink-500 text-pink-500"
-                              : ""
-                          }`}
-                        />
-                        {savedHotels.includes(hotel.id) && (
-                          <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-400 opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-3 w-3 bg-pink-500"></span>
-                          </span>
-                        )}
-                      </Button>
+          {filteredHotels.map((hotel) => {
+            const hotelSelected = isSelected(hotel);
+            
+            return (
+              <Card
+                key={hotel.id}
+                className={`overflow-hidden hover:shadow-md transition-all duration-200 ${
+                  hotelSelected ? "ring-2 ring-travel-green" : ""
+                }`}
+              >
+                <CardContent className="p-0">
+                  <div className="grid md:grid-cols-3 gap-2">
+                    {/* Hotel image carousel */}
+                    <div className="md:col-span-1">
+                      <Carousel className="w-full">
+                        <CarouselContent>
+                          {hotel.images.map((image, index) => (
+                            <CarouselItem key={index}>
+                              <div className="h-52 md:h-full min-h-40 relative">
+                                <img
+                                  src={image}
+                                  alt={`${hotel.name} - image ${index + 1}`}
+                                  className="absolute inset-0 w-full h-full object-cover"
+                                  onError={(e) => {
+                                    (e.target as HTMLImageElement).onerror = null;
+                                    (e.target as HTMLImageElement).src =
+                                      "https://placehold.co/600x400/e2e8f0/a0aec0?text=Hotel+Image";
+                                  }}
+                                />
+                              </div>
+                            </CarouselItem>
+                          ))}
+                        </CarouselContent>
+                        <CarouselPrevious className="left-2" />
+                        <CarouselNext className="right-2" />
+                      </Carousel>
                     </div>
 
-                    <div className="flex mb-2">
-                      {renderStars(hotel.rating)}
-                      <span className="text-sm ml-2">{hotel.rating} stars</span>
-                    </div>
-
-                    <div className="flex items-center text-sm text-muted-foreground mb-3">
-                      <MapPin className="h-4 w-4 mr-1" />
-                      {hotel.address}
-                    </div>
-
-                    <div className="text-sm text-blue-600 mb-3">
-                      {hotel.distanceFromStation}
-                    </div>
-
-                    <p className="text-sm mb-4">{hotel.description}</p>
-
-                    <div className="flex flex-wrap gap-2 mb-4">
-                      {hotel.amenities.map((amenity) => (
-                        <div
-                          key={amenity}
-                          className="flex items-center bg-muted px-2 py-1 rounded text-xs"
+                    {/* Hotel details */}
+                    <div className="p-4 md:col-span-2">
+                      <div className="flex justify-between mb-2">
+                        <h3 className="text-xl font-bold">{hotel.name}</h3>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleSaveToggle(hotel.id)}
+                          className="relative"
                         >
-                          {getAmenityIcon(amenity)}
-                          <span className="ml-1 capitalize">{amenity}</span>
-                        </div>
-                      ))}
-                      {hotel.vegetarianFriendly && (
-                        <Badge
-                          variant="outline"
-                          className="bg-green-50 text-green-700 border-green-200"
-                        >
-                          <Leaf className="h-3 w-3 mr-1" />
-                          Veg Friendly
-                        </Badge>
-                      )}
-                    </div>
-
-                    <div className="flex flex-wrap justify-between items-center mt-auto pt-2 border-t">
-                      <div>
-                        <div className="flex items-baseline">
-                          <IndianRupee className="h-4 w-4 mr-1" />
-                          <span className="text-2xl font-bold">
-                            {hotel.price.toLocaleString()}
-                          </span>
-                          <span className="text-sm ml-1">per night</span>
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          GST & fees included
-                        </p>
+                          <Heart
+                            className={`h-5 w-5 ${
+                              savedHotels.includes(hotel.id)
+                                ? "fill-pink-500 text-pink-500"
+                                : ""
+                            }`}
+                          />
+                          {savedHotels.includes(hotel.id) && (
+                            <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-400 opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-3 w-3 bg-pink-500"></span>
+                            </span>
+                          )}
+                        </Button>
                       </div>
 
-                      <Button className="mt-2 sm:mt-0">Book Now</Button>
+                      <div className="flex mb-2">
+                        {renderStars(hotel.rating)}
+                        <span className="text-sm ml-2">{hotel.rating} stars</span>
+                      </div>
+
+                      <div className="flex items-center text-sm text-muted-foreground mb-3">
+                        <MapPin className="h-4 w-4 mr-1" />
+                        {hotel.address}
+                      </div>
+
+                      <div className="text-sm text-blue-600 mb-3">
+                        {hotel.distanceFromStation}
+                      </div>
+
+                      <p className="text-sm mb-4">{hotel.description}</p>
+
+                      <div className="flex flex-wrap gap-2 mb-4">
+                        {hotel.amenities.map((amenity) => (
+                          <div
+                            key={amenity}
+                            className="flex items-center bg-muted px-2 py-1 rounded text-xs"
+                          >
+                            {getAmenityIcon(amenity)}
+                            <span className="ml-1 capitalize">{amenity}</span>
+                          </div>
+                        ))}
+                        {hotel.vegetarianFriendly && (
+                          <Badge
+                            variant="outline"
+                            className="bg-green-50 text-green-700 border-green-200"
+                          >
+                            <Leaf className="h-3 w-3 mr-1" />
+                            Veg Friendly
+                          </Badge>
+                        )}
+                      </div>
+
+                      <div className="flex flex-wrap justify-between items-center mt-auto pt-2 border-t">
+                        <div>
+                          <div className="flex items-baseline">
+                            <IndianRupee className="h-4 w-4 mr-1" />
+                            <span className="text-2xl font-bold">
+                              {hotel.price.toLocaleString()}
+                            </span>
+                            <span className="text-sm ml-1">per night</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            GST & fees included
+                          </p>
+                        </div>
+
+                        <Button 
+                          className={`mt-2 sm:mt-0 ${
+                            hotelSelected ? "bg-green-600 hover:bg-green-700" : ""
+                          }`}
+                          onClick={() => handleSelectHotel(hotel)}
+                        >
+                          {hotelSelected ? (
+                            <>
+                              <Check className="mr-1 h-4 w-4" /> Selected
+                            </>
+                          ) : (
+                            "Book Now"
+                          )}
+                        </Button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
     </div>

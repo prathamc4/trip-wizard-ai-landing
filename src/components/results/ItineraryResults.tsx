@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Pencil, Shuffle, Clock, MapPin, Bed, Coffee, Camera, Car, Plane, Building, IndianRupee, Utensils, Loader } from 'lucide-react';
@@ -5,8 +6,11 @@ import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { generateItinerary, ItineraryDay, Activity } from '@/utils/api';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useSelection } from '@/context/SelectionContext';
+import { Card, CardContent } from '@/components/ui/card';
 
 const ItineraryResults: React.FC = () => {
+  const { selectedFlight, selectedHotel, totalCost } = useSelection();
   const [itinerary, setItinerary] = useState<ItineraryDay[]>([]);
   const [languagePreference, setLanguagePreference] = useState("english");
   const [loading, setLoading] = useState(true);
@@ -203,10 +207,13 @@ const ItineraryResults: React.FC = () => {
     );
   }
 
-  // Calculate total cost
-  const totalCost = itinerary.reduce((total, day) => {
+  // Calculate itinerary cost (excluding flight and hotel that are managed separately)
+  const itineraryCost = itinerary.reduce((total, day) => {
     return total + day.activities.reduce((dayTotal, activity) => dayTotal + activity.cost, 0);
   }, 0);
+
+  // Calculate combined total cost
+  const combinedTotalCost = itineraryCost + totalCost;
 
   return (
     <div className="space-y-6">
@@ -232,12 +239,99 @@ const ItineraryResults: React.FC = () => {
         </div>
       </div>
 
+      {/* Selected Flight & Hotel Section */}
+      <div className="space-y-4">
+        {selectedFlight && (
+          <Card className="overflow-hidden border-travel-blue/20 bg-blue-50/50">
+            <CardContent className="p-4">
+              <div className="flex justify-between items-center mb-2">
+                <h4 className="font-semibold text-travel-blue flex items-center">
+                  <Plane className="mr-2 h-5 w-5" /> Selected Flight
+                </h4>
+              </div>
+              <div className="flex flex-wrap justify-between items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center">
+                    {selectedFlight.logo ? (
+                      <img
+                        src={selectedFlight.logo}
+                        alt={selectedFlight.airline}
+                        className="w-full h-full object-contain"
+                      />
+                    ) : (
+                      <Plane className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </div>
+                  <div>
+                    <p className="font-medium">{selectedFlight.airline} • {selectedFlight.flightNumber}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {selectedFlight.departureTime} - {selectedFlight.arrivalTime} • {selectedFlight.duration}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-baseline">
+                  <IndianRupee className="h-3 w-3 mr-1" />
+                  <span className="text-lg font-bold">
+                    {selectedFlight.price.toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {selectedHotel && (
+          <Card className="overflow-hidden border-purple-400/20 bg-purple-50/50">
+            <CardContent className="p-4">
+              <div className="flex justify-between items-center mb-2">
+                <h4 className="font-semibold text-purple-700 flex items-center">
+                  <Bed className="mr-2 h-5 w-5" /> Selected Hotel
+                </h4>
+              </div>
+              <div className="flex flex-wrap justify-between items-center gap-3">
+                <div className="flex items-center gap-2">
+                  {selectedHotel.images.length > 0 && (
+                    <div className="w-12 h-12 rounded overflow-hidden flex-shrink-0">
+                      <img 
+                        src={selectedHotel.images[0]} 
+                        alt={selectedHotel.name}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  )}
+                  <div>
+                    <p className="font-medium">{selectedHotel.name}</p>
+                    <div className="flex items-center text-yellow-500">
+                      {Array.from({ length: Math.floor(selectedHotel.rating) }).map((_, i) => (
+                        <Star key={i} className="w-3 h-3 fill-current" />
+                      ))}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {selectedHotel.address}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-col items-end">
+                  <div className="flex items-baseline">
+                    <IndianRupee className="h-3 w-3 mr-1" />
+                    <span className="text-lg font-bold">
+                      {selectedHotel.price.toLocaleString()}
+                    </span>
+                    <span className="text-xs ml-1">per night</span>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
       <div className="bg-muted/30 p-3 rounded-md flex flex-wrap justify-between gap-y-3">
         <div>
           <span className="text-sm font-medium">Total Estimated Cost</span>
           <div className="flex items-center text-2xl font-bold">
             <IndianRupee className="h-5 w-5 mr-1" />
-            {totalCost.toLocaleString()}
+            {combinedTotalCost.toLocaleString()}
           </div>
         </div>
         <div className="flex flex-col items-end">
@@ -330,5 +424,8 @@ const ItineraryResults: React.FC = () => {
     </div>
   );
 };
+
+// Import the Star icon at the top of the file
+import { Star } from 'lucide-react';
 
 export default ItineraryResults;
