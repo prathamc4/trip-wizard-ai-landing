@@ -1,4 +1,3 @@
-
 import { toast } from 'sonner';
 
 export interface HotelSearchParams {
@@ -39,28 +38,29 @@ export const fetchHotels = async (params: HotelSearchParams): Promise<HotelResul
   try {
     console.log('Fetching hotel data with params:', params);
     
-    // Prepare the SerpAPI request
+    // Get the API key from environment variables
     const apiKey = import.meta.env.VITE_SERPAPI_KEY;
     if (!apiKey) {
       throw new Error('SerpAPI key not found in environment variables');
     }
     
-    // Build SerpAPI URL for Google Hotels
-    const serpApiUrl = `https://serpapi.com/search.json?engine=google_hotels&q=hotels+in+${encodeURIComponent(params.destination)}&check_in_date=${params.checkInDate}&check_out_date=${params.checkOutDate}&adults=${params.adults || 2}&currency=${params.currency || 'INR'}&api_key=${apiKey}`;
+    // Use our backend server to avoid CORS issues
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+    const apiUrl = `${backendUrl}/api/hotels?destination=${encodeURIComponent(params.destination)}&checkInDate=${params.checkInDate}&checkOutDate=${params.checkOutDate}&adults=${params.adults || 2}&currency=${params.currency || 'INR'}&key=${apiKey}`;
     
-    console.log('Making API request to SerpAPI for hotel data');
+    console.log('Making API request to backend for hotel data');
     
-    // Make request to SerpAPI
-    const response = await fetch(serpApiUrl);
+    // Make the request to our backend server
+    const response = await fetch(apiUrl);
     
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('SerpAPI Error:', response.status, errorText);
-      throw new Error(`SerpAPI request failed: ${response.status}`);
+      console.error('Backend API Error:', response.status, errorText);
+      throw new Error(`Backend API request failed: ${response.status}`);
     }
     
     const data = await response.json();
-    console.log('SerpAPI response received:', data);
+    console.log('Backend response received for hotels');
     
     // Transform the API response to our format
     const transformedData = transformSerpAPIHotelResponse(data, params);
@@ -71,32 +71,6 @@ export const fetchHotels = async (params: HotelSearchParams): Promise<HotelResul
     
   } catch (error) {
     console.error('Error fetching hotel data:', error);
-    
-    // If the error is due to CORS, try using a CORS proxy
-    if (error.toString().includes('CORS')) {
-      try {
-        console.log('Attempting to use CORS proxy for hotel data');
-        const proxyUrl = 'https://cors-anywhere.herokuapp.com/';
-        const apiKey = import.meta.env.VITE_SERPAPI_KEY;
-        
-        const serpApiUrl = `${proxyUrl}https://serpapi.com/search.json?engine=google_hotels&q=hotels+in+${encodeURIComponent(params.destination)}&check_in_date=${params.checkInDate}&check_out_date=${params.checkOutDate}&adults=${params.adults || 2}&currency=${params.currency || 'INR'}&api_key=${apiKey}`;
-        
-        const response = await fetch(serpApiUrl);
-        
-        if (!response.ok) {
-          throw new Error(`Proxy request failed: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        const transformedData = transformSerpAPIHotelResponse(data, params);
-        
-        // Cache the transformed data
-        cache[cacheKey] = { data: transformedData, timestamp: now };
-        return transformedData;
-      } catch (proxyError) {
-        console.error('CORS proxy attempt failed:', proxyError);
-      }
-    }
     
     // Fall back to sample data on error
     const fallbackData = getSampleHotelData(params);
