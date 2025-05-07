@@ -1,25 +1,96 @@
-
-import React, { useState } from 'react';
-import { Calendar } from '@/components/ui/calendar';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Input } from '@/components/ui/input';
-import { Slider } from '@/components/ui/slider';
-import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, Search, Loader, Map, Hotel, Users } from 'lucide-react';
-import { format } from 'date-fns';
-import { cn } from '@/lib/utils';
-import SearchResults from '@/components/SearchResults';
-import { toast } from 'sonner';
+import React, { useState } from "react";
+import { Calendar } from "@/components/ui/calendar";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Slider } from "@/components/ui/slider";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { CalendarIcon, Search, Loader, Map, Hotel, Users } from "lucide-react";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+import SearchResults from "@/components/SearchResults";
+import { toast } from "sonner";
 
 // Indian cities for autocomplete
 const indianCities = [
-  "Agra", "Ahmedabad", "Amritsar", "Bangalore", "Bhopal", "Bhubaneswar", 
-  "Chennai", "Dehradun", "Delhi", "Goa", "Guwahati", "Hyderabad", "Jaipur", 
-  "Kochi", "Kolkata", "Lucknow", "Mumbai", "Mysore", "Nagpur", "New Delhi",
-  "Patna", "Pune", "Shimla", "Srinagar", "Thiruvananthapuram", "Varanasi"
+  "Agra",
+  "Ahmedabad",
+  "Amritsar",
+  "Aurangabad",
+  "Bagdogra",
+  "Bangalore",
+  "Belgaum",
+  "Bhopal",
+  "Bhubaneswar",
+  "Chandigarh",
+  "Chennai",
+  "Coimbatore",
+  "Dehradun",
+  "Delhi",
+  "Dibrugarh",
+  "Dimapur",
+  "Durgapur",
+  "Goa",
+  "Gorakhpur",
+  "Guwahati",
+  "Gwalior",
+  "Hubli",
+  "Hyderabad",
+  "Imphal",
+  "Indore",
+  "Itanagar",
+  "Jabalpur",
+  "Jaipur",
+  "Jammu",
+  "Jamshedpur",
+  "Jodhpur",
+  "Kannur",
+  "Kanpur",
+  "Kochi",
+  "Kozhikode",
+  "Kolkata",
+  "Leh",
+  "Lucknow",
+  "Madurai",
+  "Mangalore",
+  "Mumbai",
+  "Mysore",
+  "Nagpur",
+  "New Delhi",
+  "Patna",
+  "Port Blair",
+  "Pune",
+  "Raipur",
+  "Rajahmundry",
+  "Rajkot",
+  "Ranchi",
+  "Shillong",
+  "Shimla",
+  "Silchar",
+  "Srinagar",
+  "Surat",
+  "Tezpur",
+  "Thiruvananthapuram",
+  "Tiruchirappalli",
+  "Tirupati",
+  "Tuticorin",
+  "Udaipur",
+  "Vadodara",
+  "Varanasi",
+  "Vijayawada",
+  "Vishakhapatnam",
 ];
 
 const travelPreferences = [
@@ -31,12 +102,12 @@ const travelPreferences = [
   { id: "religious", label: "Religious Sites" },
   { id: "heritage", label: "Heritage" },
   { id: "food", label: "Food Tours" },
-  { id: "wildlife", label: "Wildlife" }
+  { id: "wildlife", label: "Wildlife" },
 ];
 
 const TravelPlanningSection = () => {
-  const [startLocation, setStartLocation] = useState('');
-  const [destination, setDestination] = useState('');
+  const [startLocation, setStartLocation] = useState("");
+  const [destination, setDestination] = useState("");
   const [startDate, setStartDate] = useState<Date>();
   const [endDate, setEndDate] = useState<Date>();
   const [budget, setBudget] = useState([2000]);
@@ -52,21 +123,23 @@ const TravelPlanningSection = () => {
   const [showDestCities, setShowDestCities] = useState(false);
 
   const handleCheckboxChange = (value: string, checked: boolean) => {
-    setPreferences(prev => {
+    setPreferences((prev) => {
       if (checked) {
         return [...prev, value];
       } else {
-        return prev.filter(pref => pref !== value);
+        return prev.filter((pref) => pref !== value);
       }
     });
   };
 
-  const handleStartLocationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleStartLocationChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const value = e.target.value;
     setStartLocation(value);
-    
+
     if (value.length > 1) {
-      const filtered = indianCities.filter(city => 
+      const filtered = indianCities.filter((city) =>
         city.toLowerCase().includes(value.toLowerCase())
       );
       setFilteredStartCities(filtered);
@@ -79,9 +152,9 @@ const TravelPlanningSection = () => {
   const handleDestinationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setDestination(value);
-    
+
     if (value.length > 1) {
-      const filtered = indianCities.filter(city => 
+      const filtered = indianCities.filter((city) =>
         city.toLowerCase().includes(value.toLowerCase())
       );
       setFilteredDestCities(filtered);
@@ -103,36 +176,36 @@ const TravelPlanningSection = () => {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validate required fields
     if (!startLocation) {
       toast.error("Please enter your starting location");
       return;
     }
-    
+
     if (!destination) {
       toast.error("Please enter your destination");
       return;
     }
-    
+
     if (!startDate) {
       toast.error("Please select a start date");
       return;
     }
-    
+
     // Fix for the date issue - ensure correct timezone handling
     const formatDateForAPI = (date: Date | undefined): string => {
-      if (!date) return '';
-      
+      if (!date) return "";
+
       // Create a new date object to avoid timezone issues
       // This ensures we use the selected date exactly as displayed to the user
       const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+
       return `${year}-${month}-${day}`;
     };
-    
+
     // Store search data in session storage for components to access
     const searchData = {
       startLocation,
@@ -142,14 +215,14 @@ const TravelPlanningSection = () => {
       budget: budget[0],
       travelers: parseInt(travelers),
       preferences,
-      transportMode
+      transportMode,
     };
-    
-    console.log('Search data with fixed dates:', searchData);
-    sessionStorage.setItem('travelSearchData', JSON.stringify(searchData));
-    
+
+    console.log("Search data with fixed dates:", searchData);
+    sessionStorage.setItem("travelSearchData", JSON.stringify(searchData));
+
     setIsSearching(true);
-    
+
     // Simulate API loading time
     setTimeout(() => {
       setIsSearching(false);
@@ -159,20 +232,25 @@ const TravelPlanningSection = () => {
   };
 
   return (
-    <section id="plan" className="section bg-gradient-to-b from-white to-blue-50">
+    <section
+      id="plan"
+      className="section bg-gradient-to-b from-white to-blue-50"
+    >
       <div className="container-custom py-16">
         <div className="max-w-4xl mx-auto">
           <h2 className="text-3xl md:text-4xl font-bold text-center mb-8 text-travel-darkBlue">
             Plan Your Next Adventure
           </h2>
-          
+
           <div className="bg-white rounded-xl shadow-lg p-6 md:p-8 mb-8 bg-opacity-90 backdrop-blur-sm">
             <form onSubmit={handleSearch} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2 relative">
-                  <label className="text-sm font-medium">Starting Location</label>
-                  <Input 
-                    type="text" 
+                  <label className="text-sm font-medium">
+                    Starting Location
+                  </label>
+                  <Input
+                    type="text"
                     placeholder="Enter your starting point"
                     value={startLocation}
                     onChange={handleStartLocationChange}
@@ -181,8 +259,8 @@ const TravelPlanningSection = () => {
                   />
                   {showStartCities && filteredStartCities.length > 0 && (
                     <div className="absolute z-10 w-full bg-white border rounded-md shadow-lg max-h-60 overflow-y-auto">
-                      {filteredStartCities.map(city => (
-                        <div 
+                      {filteredStartCities.map((city) => (
+                        <div
                           key={city}
                           className="px-4 py-2 hover:bg-blue-50 cursor-pointer"
                           onClick={() => selectStartCity(city)}
@@ -193,11 +271,11 @@ const TravelPlanningSection = () => {
                     </div>
                   )}
                 </div>
-                
+
                 <div className="space-y-2 relative">
                   <label className="text-sm font-medium">Destination</label>
-                  <Input 
-                    type="text" 
+                  <Input
+                    type="text"
                     placeholder="Where do you want to go?"
                     value={destination}
                     onChange={handleDestinationChange}
@@ -206,8 +284,8 @@ const TravelPlanningSection = () => {
                   />
                   {showDestCities && filteredDestCities.length > 0 && (
                     <div className="absolute z-10 w-full bg-white border rounded-md shadow-lg max-h-60 overflow-y-auto">
-                      {filteredDestCities.map(city => (
-                        <div 
+                      {filteredDestCities.map((city) => (
+                        <div
                           key={city}
                           className="px-4 py-2 hover:bg-blue-50 cursor-pointer"
                           onClick={() => selectDestCity(city)}
@@ -218,7 +296,7 @@ const TravelPlanningSection = () => {
                     </div>
                   )}
                 </div>
-                
+
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Start Date</label>
                   <Popover>
@@ -231,7 +309,11 @@ const TravelPlanningSection = () => {
                         )}
                       >
                         <CalendarIcon className="mr-2 h-4 w-4" />
-                        {startDate ? format(startDate, "PPP") : <span>Select date</span>}
+                        {startDate ? (
+                          format(startDate, "PPP")
+                        ) : (
+                          <span>Select date</span>
+                        )}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
@@ -245,7 +327,7 @@ const TravelPlanningSection = () => {
                     </PopoverContent>
                   </Popover>
                 </div>
-                
+
                 <div className="space-y-2">
                   <label className="text-sm font-medium">End Date</label>
                   <Popover>
@@ -258,7 +340,11 @@ const TravelPlanningSection = () => {
                         )}
                       >
                         <CalendarIcon className="mr-2 h-4 w-4" />
-                        {endDate ? format(endDate, "PPP") : <span>Select date</span>}
+                        {endDate ? (
+                          format(endDate, "PPP")
+                        ) : (
+                          <span>Select date</span>
+                        )}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
@@ -273,11 +359,13 @@ const TravelPlanningSection = () => {
                   </Popover>
                 </div>
               </div>
-              
+
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <label className="text-sm font-medium">Budget (₹)</label>
-                  <span className="text-sm font-medium text-travel-blue">₹{budget[0].toLocaleString()}</span>
+                  <span className="text-sm font-medium text-travel-blue">
+                    ₹{budget[0].toLocaleString()}
+                  </span>
                 </div>
                 <Slider
                   defaultValue={[2000]}
@@ -292,10 +380,12 @@ const TravelPlanningSection = () => {
                   <span>₹50,000</span>
                 </div>
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Number of Travelers</label>
+                  <label className="text-sm font-medium">
+                    Number of Travelers
+                  </label>
                   <Select value={travelers} onValueChange={setTravelers}>
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Select number of travelers" />
@@ -303,16 +393,21 @@ const TravelPlanningSection = () => {
                     <SelectContent>
                       {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
                         <SelectItem key={num} value={num.toString()}>
-                          {num} {num === 1 ? 'Traveler' : 'Travelers'}
+                          {num} {num === 1 ? "Traveler" : "Travelers"}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
-                
+
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Preferred Transport in India</label>
-                  <Select value={transportMode} onValueChange={setTransportMode}>
+                  <label className="text-sm font-medium">
+                    Preferred Transport in India
+                  </label>
+                  <Select
+                    value={transportMode}
+                    onValueChange={setTransportMode}
+                  >
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Select transport mode" />
                     </SelectTrigger>
@@ -325,20 +420,23 @@ const TravelPlanningSection = () => {
                   </Select>
                 </div>
               </div>
-              
+
               <div className="space-y-3">
                 <label className="text-sm font-medium">Trip Preferences</label>
                 <div className="flex flex-wrap gap-x-6 gap-y-3">
                   {travelPreferences.map((preference) => (
-                    <div key={preference.id} className="flex items-center space-x-2">
-                      <Checkbox 
+                    <div
+                      key={preference.id}
+                      className="flex items-center space-x-2"
+                    >
+                      <Checkbox
                         id={preference.id}
                         checked={preferences.includes(preference.id)}
-                        onCheckedChange={(checked) => 
+                        onCheckedChange={(checked) =>
                           handleCheckboxChange(preference.id, checked === true)
                         }
                       />
-                      <label 
+                      <label
                         htmlFor={preference.id}
                         className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                       >
@@ -348,9 +446,9 @@ const TravelPlanningSection = () => {
                   ))}
                 </div>
               </div>
-              
-              <Button 
-                type="submit" 
+
+              <Button
+                type="submit"
                 className="w-full md:w-auto px-8 py-6 text-lg bg-travel-green hover:bg-travel-darkBlue"
                 disabled={isSearching}
               >
@@ -368,7 +466,7 @@ const TravelPlanningSection = () => {
               </Button>
             </form>
           </div>
-          
+
           {showResults && (
             <div className="bg-white rounded-xl shadow-lg p-6 animate-fade-in">
               <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -385,20 +483,27 @@ const TravelPlanningSection = () => {
                     <Map className="mr-2 h-4 w-4" />
                     <span>Itinerary</span>
                   </TabsTrigger>
-                  <TabsTrigger value="attractions" className="flex items-center">
+                  <TabsTrigger
+                    value="attractions"
+                    className="flex items-center"
+                  >
                     <Users className="mr-2 h-4 w-4" />
                     <span>Attractions</span>
                   </TabsTrigger>
                 </TabsList>
-                
+
                 <SearchResults activeTab={activeTab} />
               </Tabs>
             </div>
           )}
         </div>
-        
+
         <div className="hidden lg:block absolute right-0 bottom-0 w-64 h-64 opacity-20 pointer-events-none">
-          <img src="https://lovable.dev/wp-content/uploads/plane-travel-illustration.png" alt="Travel illustration" className="w-full h-full object-contain" />
+          <img
+            src="https://lovable.dev/wp-content/uploads/plane-travel-illustration.png"
+            alt="Travel illustration"
+            className="w-full h-full object-contain"
+          />
         </div>
       </div>
     </section>
