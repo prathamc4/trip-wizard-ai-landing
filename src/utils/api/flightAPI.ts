@@ -1,4 +1,3 @@
-
 import { toast } from 'sonner';
 
 export interface FlightSearchParams {
@@ -34,6 +33,9 @@ export interface FlightResult {
 // Cache mechanism to avoid redundant API calls
 const cache: Record<string, { data: FlightResult[], timestamp: number }> = {};
 const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
+
+// Backend server URL - will need to be updated based on deployment
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
 
 export const fetchFlights = async (params: FlightSearchParams): Promise<FlightResult[]> => {
   const cacheKey = JSON.stringify(params);
@@ -83,44 +85,40 @@ export const fetchFlights = async (params: FlightSearchParams): Promise<FlightRe
     if (airportCodes[origin]) origin = airportCodes[origin];
     if (airportCodes[destination]) destination = airportCodes[destination];
     
-    // Instead of direct API call or CORS proxies, we'll use a local proxy approach
-    // For this to work in development, we need to add a proxy configuration in vite.config.ts
-    // But since we can't modify that file, we'll use a different approach
+    // Construct the URL for the backend API
+    const backendUrl = `${BACKEND_URL}/api/flights?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&date=${params.departureDate}&return=${params.returnDate}&currency=${params.currency || 'INR'}&key=${apiKey}`;
     
-    // Use fetch with a relative URL that will be handled by Vite's proxy or by our production server
-    const localProxyUrl = `/api/flights?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&date=${params.departureDate}&return=${params.returnDate}&currency=${params.currency || 'INR'}&key=${apiKey}`;
+    console.log('Making request to backend server...');
     
-    console.log('Making local proxy request for flight data');
-    
-    // Temporary solution while we wait for backend implementation
-    // Show sample data with a message explaining the situation
-    console.warn('Local proxy not yet implemented - using sample data');
-    toast.info('Backend proxy not configured yet. Using sample data.', {
-      description: 'A backend server is needed to make API calls securely.',
-      duration: 5000
-    });
-    
-    // For now, return realistic sample data that matches what the API would return
-    const sampleData = getSampleFlightData(params);
-    
-    // Cache the sample data
-    cache[cacheKey] = { data: sampleData, timestamp: now };
-    return sampleData;
-    
-    /* This code will be used when backend is implemented
-    const response = await fetch(localProxyUrl);
-    
-    if (!response.ok) {
-      throw new Error(`API request failed with status ${response.status}`);
+    try {
+      // First attempt to use the backend server
+      const response = await fetch(backendUrl);
+      
+      if (!response.ok) {
+        throw new Error(`Backend server returned status ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log('Received data from backend server:', data);
+      
+      const transformedData = transformSerpAPIResponse(data, params);
+      
+      // Cache the transformed data
+      cache[cacheKey] = { data: transformedData, timestamp: now };
+      return transformedData;
+    } catch (backendError) {
+      console.warn('Backend request failed:', backendError);
+      console.log('Falling back to sample data...');
+      toast.warning('Using sample flight data as backend connection failed', {
+        description: 'Please check that the backend server is running.',
+        duration: 5000
+      });
+      
+      // Fall back to sample data
+      const sampleData = getSampleFlightData(params);
+      cache[cacheKey] = { data: sampleData, timestamp: now };
+      return sampleData;
     }
-    
-    const data = await response.json();
-    const transformedData = transformSerpAPIResponse(data, params);
-    
-    // Cache the transformed data
-    cache[cacheKey] = { data: transformedData, timestamp: now };
-    return transformedData;
-    */
 
   } catch (error) {
     console.error('Error fetching flight data:', error);

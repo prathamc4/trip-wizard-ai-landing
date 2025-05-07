@@ -2,7 +2,7 @@
 import React from 'react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { AlertCircle, Bug, RefreshCcw, ExternalLink, Server } from 'lucide-react';
+import { AlertCircle, Bug, RefreshCcw, ExternalLink, Server, Terminal } from 'lucide-react';
 
 interface ApiStatusProps {
   isUsingSampleData: boolean;
@@ -20,6 +20,10 @@ const ApiDebugStatus: React.FC<ApiStatusProps> = ({
   if (!isUsingSampleData) {
     return null;
   }
+
+  const handleStartServer = () => {
+    window.open('http://localhost:3001/api/health', '_blank');
+  };
 
   return (
     <Alert variant="destructive" className="mb-4">
@@ -43,6 +47,14 @@ const ApiDebugStatus: React.FC<ApiStatusProps> = ({
               <RefreshCcw className="h-3 w-3 mr-1" /> Retry API Connection
             </Button>
           )}
+          <Button 
+            variant="outline" 
+            size="sm"
+            className="bg-white hover:bg-gray-100"
+            onClick={handleStartServer}
+          >
+            <Terminal className="h-3 w-3 mr-1" /> Check Backend Server
+          </Button>
           <Button 
             variant="outline" 
             size="sm"
