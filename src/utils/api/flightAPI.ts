@@ -1,3 +1,4 @@
+
 import { toast } from 'sonner';
 
 export interface FlightSearchParams {
@@ -34,13 +35,6 @@ export interface FlightResult {
 const cache: Record<string, { data: FlightResult[], timestamp: number }> = {};
 const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
 
-// List of public CORS proxies to try
-const CORS_PROXIES = [
-  'https://corsproxy.io/?',
-  'https://api.allorigins.win/raw?url=',
-  'https://cors.sh/'
-];
-
 export const fetchFlights = async (params: FlightSearchParams): Promise<FlightResult[]> => {
   const cacheKey = JSON.stringify(params);
   const now = Date.now();
@@ -52,6 +46,7 @@ export const fetchFlights = async (params: FlightSearchParams): Promise<FlightRe
   }
   
   try {
+    console.log('Fetching flights with dates:', params.departureDate, 'to', params.returnDate);
     console.log('Fetching flight data with params:', params);
     
     // Check if we have a Serpapi key
@@ -60,7 +55,6 @@ export const fetchFlights = async (params: FlightSearchParams): Promise<FlightRe
     
     if (!apiKey) {
       console.warn('SerpAPI key not found in environment variables');
-      // If no API key, use sample data immediately
       throw new Error('SerpAPI key not found');
     }
 
@@ -89,80 +83,45 @@ export const fetchFlights = async (params: FlightSearchParams): Promise<FlightRe
     if (airportCodes[origin]) origin = airportCodes[origin];
     if (airportCodes[destination]) destination = airportCodes[destination];
     
-    // Build SerpAPI URL
-    const serpApiUrl = `https://serpapi.com/search?engine=google_flights&departure_id=${encodeURIComponent(origin)}&arrival_id=${encodeURIComponent(destination)}&outbound_date=${params.departureDate}&return_date=${params.returnDate}&currency=${params.currency || 'INR'}&api_key=${apiKey}`;
+    // Instead of direct API call or CORS proxies, we'll use a local proxy approach
+    // For this to work in development, we need to add a proxy configuration in vite.config.ts
+    // But since we can't modify that file, we'll use a different approach
     
-    console.log('Making API request to SerpAPI for flight data');
+    // Use fetch with a relative URL that will be handled by Vite's proxy or by our production server
+    const localProxyUrl = `/api/flights?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&date=${params.departureDate}&return=${params.returnDate}&currency=${params.currency || 'INR'}&key=${apiKey}`;
     
-    // Try the direct request first
-    try {
-      const response = await fetch(serpApiUrl);
-      
-      if (response.ok) {
-        const data = await response.json();
-        console.log('SerpAPI response received successfully');
-        
-        // Transform the API response to our format
-        const transformedData = transformSerpAPIResponse(data, params);
-        
-        // Cache the transformed data
-        cache[cacheKey] = { data: transformedData, timestamp: now };
-        return transformedData;
-      }
-      
-      // If direct request fails, log the error but continue to try proxies
-      const errorText = await response.text();
-      console.warn('Direct SerpAPI request failed:', response.status, errorText);
-      throw new Error(`SerpAPI direct request failed: ${response.status}`);
-    } catch (directError) {
-      console.warn('Direct API call failed, trying CORS proxies');
-      
-      // Try each proxy in sequence
-      for (const proxy of CORS_PROXIES) {
-        try {
-          let proxiedUrl;
-          
-          if (proxy === 'https://cors.sh/') {
-            // Special handling for cors.sh which needs headers
-            console.log(`Trying CORS proxy: ${proxy}`);
-            const response = await fetch(`${proxy}${serpApiUrl}`, {
-              headers: {
-                'x-cors-api-key': 'temp_e50e8c5c2a5118d69991f120e',
-                'Content-Type': 'application/json'
-              }
-            });
-            
-            if (response.ok) {
-              const data = await response.json();
-              console.log(`CORS proxy ${proxy} successful`);
-              const transformedData = transformSerpAPIResponse(data, params);
-              cache[cacheKey] = { data: transformedData, timestamp: now };
-              return transformedData;
-            }
-          } else {
-            // Standard proxy format
-            proxiedUrl = `${proxy}${encodeURIComponent(serpApiUrl)}`;
-            console.log(`Trying CORS proxy: ${proxy}`);
-            
-            const response = await fetch(proxiedUrl);
-            
-            if (response.ok) {
-              const data = await response.json();
-              console.log(`CORS proxy ${proxy} successful`);
-              const transformedData = transformSerpAPIResponse(data, params);
-              cache[cacheKey] = { data: transformedData, timestamp: now };
-              return transformedData;
-            }
-          }
-        } catch (proxyError) {
-          console.warn(`CORS proxy ${proxy} failed:`, proxyError);
-          // Continue to next proxy on failure
-        }
-      }
-      
-      // All proxies failed, throw an error to trigger sample data
-      throw new Error('All CORS proxies failed');
+    console.log('Making local proxy request for flight data');
+    
+    // Temporary solution while we wait for backend implementation
+    // Show sample data with a message explaining the situation
+    console.warn('Local proxy not yet implemented - using sample data');
+    toast.info('Backend proxy not configured yet. Using sample data.', {
+      description: 'A backend server is needed to make API calls securely.',
+      duration: 5000
+    });
+    
+    // For now, return realistic sample data that matches what the API would return
+    const sampleData = getSampleFlightData(params);
+    
+    // Cache the sample data
+    cache[cacheKey] = { data: sampleData, timestamp: now };
+    return sampleData;
+    
+    /* This code will be used when backend is implemented
+    const response = await fetch(localProxyUrl);
+    
+    if (!response.ok) {
+      throw new Error(`API request failed with status ${response.status}`);
     }
+    
+    const data = await response.json();
+    const transformedData = transformSerpAPIResponse(data, params);
+    
+    // Cache the transformed data
+    cache[cacheKey] = { data: transformedData, timestamp: now };
+    return transformedData;
+    */
+
   } catch (error) {
     console.error('Error fetching flight data:', error);
     
@@ -235,80 +194,204 @@ function transformSerpAPIResponse(apiResponse: any, params: FlightSearchParams):
   }
 }
 
-// Sample data as fallback - keeping the same sample data
+// Enhanced sample data with destination-specific details
 function getSampleFlightData(params: FlightSearchParams): FlightResult[] {
-  // Enhanced sample data with more variety
-  return [
-    {
-      id: '1',
-      airline: 'Air India',
-      flightNumber: 'AI 863',
-      departureTime: '06:15 AM',
-      arrivalTime: '08:35 AM',
-      duration: '2h 20m',
-      departureAirport: params.origin || 'DEL',
-      departureCity: params.origin === 'BOM' ? 'Mumbai' : params.origin || 'New Delhi',
-      arrivalAirport: params.destination || 'BOM',
-      arrivalCity: params.destination || 'Mumbai',
-      price: 4899,
-      direct: true,
-      baggageAllowance: '25 kg',
-      amenities: ['Meal', 'Entertainment'],
-      logo: 'https://images.unsplash.com/photo-1482938289607-e9573fc25ebb?fit=crop&w=40&h=40'
-    },
-    {
-      id: '2',
-      airline: 'IndiGo',
-      flightNumber: '6E 6174',
-      departureTime: '08:25 AM',
-      arrivalTime: '10:40 AM',
-      duration: '2h 15m',
-      departureAirport: params.origin || 'DEL',
-      departureCity: params.origin === 'BOM' ? 'Mumbai' : params.origin || 'New Delhi',
-      arrivalAirport: params.destination || 'BOM',
-      arrivalCity: params.destination || 'Mumbai',
-      price: 3750,
-      direct: true,
-      baggageAllowance: '15 kg',
-      amenities: ['Paid Meal'],
-      logo: 'https://images.unsplash.com/photo-1500375592092-40eb2168fd21?fit=crop&w=40&h=40'
-    },
-    {
-      id: '3',
-      airline: 'Vistara',
-      flightNumber: 'UK 995',
-      departureTime: '11:30 AM',
-      arrivalTime: '13:55 PM',
-      duration: '2h 25m',
-      departureAirport: params.origin || 'DEL',
-      departureCity: params.origin === 'BOM' ? 'Mumbai' : params.origin || 'New Delhi',
-      arrivalAirport: params.destination || 'BOM',
-      arrivalCity: params.destination || 'Mumbai',
-      price: 5299,
-      direct: true,
-      baggageAllowance: '20 kg',
-      amenities: ['Premium Meal', 'Entertainment'],
-      logo: 'https://images.unsplash.com/photo-1469041797191-50ace28483c3?fit=crop&w=40&h=40'
-    },
-    {
-      id: '4',
-      airline: 'SpiceJet',
-      flightNumber: 'SG 8169',
-      departureTime: '16:45 PM',
-      arrivalTime: '20:05 PM',
-      duration: '3h 20m',
-      departureAirport: params.origin || 'DEL',
-      departureCity: params.origin === 'BOM' ? 'Mumbai' : params.origin || 'New Delhi',
-      arrivalAirport: params.destination || 'BOM',
-      arrivalCity: params.destination || 'Mumbai',
-      price: 3499,
-      direct: false,
-      layoverAirport: 'AMD',
-      layoverCity: 'Ahmedabad',
-      layoverDuration: '45m',
-      baggageAllowance: '15 kg',
-      amenities: ['Paid Meal'],
-      logo: 'https://images.unsplash.com/photo-1518877593221-1f28583780b4?fit=crop&w=40&h=40'
-    }
+  const { origin, destination, departureDate, returnDate } = params;
+  
+  console.log(`Generating sample flight data from ${origin} to ${destination} on ${departureDate}`);
+  
+  // Create a set of common airlines
+  const airlines = [
+    { name: 'Air India', code: 'AI', logo: 'https://logos.skyscnr.com/images/airlines/favicon/AI.png' },
+    { name: 'IndiGo', code: '6E', logo: 'https://logos.skyscnr.com/images/airlines/favicon/6E.png' },
+    { name: 'Vistara', code: 'UK', logo: 'https://logos.skyscnr.com/images/airlines/favicon/UK.png' },
+    { name: 'SpiceJet', code: 'SG', logo: 'https://logos.skyscnr.com/images/airlines/favicon/SG.png' },
+    { name: 'GoAir', code: 'G8', logo: 'https://logos.skyscnr.com/images/airlines/favicon/G8.png' },
+    { name: 'AirAsia India', code: 'I5', logo: 'https://logos.skyscnr.com/images/airlines/favicon/I5.png' }
   ];
+  
+  // Generate prices based on distance between cities
+  let basePrice = 3500;
+  let flightDuration = '2h 15m';
+  
+  // Calculate distance-based price adjustments
+  const cityPairs: Record<string, { price: number, duration: string }> = {
+    'DEL-BOM': { price: 5200, duration: '2h 10m' },
+    'BOM-DEL': { price: 5100, duration: '2h 05m' },
+    'DEL-MAA': { price: 6500, duration: '2h 45m' },
+    'MAA-DEL': { price: 6400, duration: '2h 40m' },
+    'DEL-BLR': { price: 6000, duration: '2h 35m' },
+    'BLR-DEL': { price: 5900, duration: '2h 30m' },
+    'BOM-BLR': { price: 3800, duration: '1h 35m' },
+    'BLR-BOM': { price: 3700, duration: '1h 30m' },
+    'DEL-CCU': { price: 5500, duration: '2h 20m' },
+    'CCU-DEL': { price: 5400, duration: '2h 15m' },
+    'DEL-HYD': { price: 5800, duration: '2h 05m' },
+    'HYD-DEL': { price: 5700, duration: '2h 00m' },
+    'DEL-ATQ': { price: 3500, duration: '1h 10m' },
+    'ATQ-DEL': { price: 3400, duration: '1h 05m' },
+  };
+  
+  // Get origin and destination codes
+  const originCode = getAirportCode(origin);
+  const destinationCode = getAirportCode(destination);
+  const routeKey = `${originCode}-${destinationCode}`;
+  
+  if (cityPairs[routeKey]) {
+    basePrice = cityPairs[routeKey].price;
+    flightDuration = cityPairs[routeKey].duration;
+  }
+  
+  // Generate flight times based on the day
+  const departureDate2 = new Date(departureDate);
+  const morningDeparture = `0${6 + Math.floor(Math.random() * 4)}:${Math.floor(Math.random() * 6)}${Math.floor(Math.random() * 10)} AM`;
+  const afternoonDeparture = `${1 + Math.floor(Math.random() * 4)}:${Math.floor(Math.random() * 6)}${Math.floor(Math.random() * 10)} PM`;
+  const eveningDeparture = `0${5 + Math.floor(Math.random() * 4)}:${Math.floor(Math.random() * 6)}${Math.floor(Math.random() * 10)} PM`;
+  
+  // Generate a set of 8 sample flights for this route
+  return Array(8).fill(0).map((_, index) => {
+    const airline = airlines[index % airlines.length];
+    const isDirectFlight = index < 5; // 5 out of 8 are direct flights
+    
+    // Calculate price variations (weekend flights cost more)
+    let flightPrice = basePrice;
+    if (departureDate2.getDay() === 0 || departureDate2.getDay() === 6) {
+      flightPrice += 800; // Weekend premium
+    }
+    
+    // Add random variation to prices
+    flightPrice += Math.floor(Math.random() * 1000) - 500;
+    
+    // Generate departure times spaced throughout the day
+    let departureTimes = [morningDeparture, afternoonDeparture, eveningDeparture];
+    const departureTime = departureTimes[index % 3];
+    
+    // Calculate arrival time based on duration
+    const durationParts = flightDuration.match(/(\d+)h\s+(\d+)m/);
+    let hoursToAdd = 2;
+    let minutesToAdd = 15;
+    if (durationParts && durationParts.length >= 3) {
+      hoursToAdd = parseInt(durationParts[1]);
+      minutesToAdd = parseInt(durationParts[2]);
+    }
+    
+    // Simple arrival time calculation (not perfect but good enough for samples)
+    const depTimeBase = departureTime.includes('AM') ? 
+      parseInt(departureTime.split(':')[0]) : 
+      parseInt(departureTime.split(':')[0]) + 12;
+    
+    const arrivalHour = (depTimeBase + hoursToAdd) % 24;
+    const arrivalTime = `${arrivalHour > 12 ? arrivalHour - 12 : arrivalHour}:${Math.floor(Math.random() * 6)}${Math.floor(Math.random() * 10)} ${arrivalHour >= 12 ? 'PM' : 'AM'}`;
+    
+    // Generate flight number
+    const flightNumber = `${airline.code} ${800 + index + Math.floor(Math.random() * 100)}`;
+    
+    return {
+      id: `flight-${index + 1}`,
+      airline: airline.name,
+      flightNumber: flightNumber,
+      departureTime: departureTime,
+      arrivalTime: arrivalTime,
+      duration: isDirectFlight ? flightDuration : `${parseInt(flightDuration.split('h')[0]) + 1}h ${parseInt(flightDuration.split(' ')[1].replace('m', '')) + 15}m`,
+      departureAirport: originCode,
+      departureCity: getFullCityName(origin),
+      arrivalAirport: destinationCode,
+      arrivalCity: getFullCityName(destination),
+      price: flightPrice,
+      direct: isDirectFlight,
+      layoverAirport: isDirectFlight ? undefined : getLayoverAirport(originCode, destinationCode),
+      layoverCity: isDirectFlight ? undefined : getLayoverCity(originCode, destinationCode),
+      layoverDuration: isDirectFlight ? undefined : `${Math.floor(Math.random() * 2) + 1}h ${Math.floor(Math.random() * 60)}m`,
+      baggageAllowance: `${index % 2 === 0 ? '25' : '15'} kg`,
+      amenities: generateAmenities(airline.name, isDirectFlight),
+      logo: airline.logo
+    };
+  }).sort((a, b) => a.price - b.price); // Sort by price
+}
+
+// Helper function to get airport code from city name
+function getAirportCode(cityName: string): string {
+  const airportCodes: Record<string, string> = {
+    "Amritsar": "ATQ",
+    "Delhi": "DEL",
+    "Mumbai": "BOM",
+    "Chennai": "MAA",
+    "Bangalore": "BLR",
+    "Kolkata": "CCU",
+    "Hyderabad": "HYD",
+    "Ahmedabad": "AMD",
+    "Goa": "GOI",
+    "New Delhi": "DEL",
+    "Thiruvananthapuram": "TRV",
+    "Jaipur": "JAI",
+    "Lucknow": "LKO"
+  };
+  
+  return airportCodes[cityName] || cityName.substring(0, 3).toUpperCase();
+}
+
+// Helper function to get full city name from code or partial name
+function getFullCityName(cityNameOrCode: string): string {
+  const cityNames: Record<string, string> = {
+    "ATQ": "Amritsar",
+    "DEL": "New Delhi",
+    "BOM": "Mumbai",
+    "MAA": "Chennai",
+    "BLR": "Bangalore",
+    "CCU": "Kolkata",
+    "HYD": "Hyderabad",
+    "AMD": "Ahmedabad",
+    "GOI": "Goa",
+    "TRV": "Thiruvananthapuram",
+    "JAI": "Jaipur",
+    "LKO": "Lucknow"
+  };
+  
+  return cityNames[cityNameOrCode] || cityNameOrCode;
+}
+
+// Helper function to determine a realistic layover airport based on route
+function getLayoverAirport(origin: string, destination: string): string {
+  const commonLayovers: Record<string, string[]> = {
+    "DEL-BOM": ["JAI", "AMD"],
+    "BOM-DEL": ["JAI", "AMD"],
+    "DEL-MAA": ["HYD", "BLR"],
+    "MAA-DEL": ["HYD", "BLR"],
+    "DEL-BLR": ["HYD"],
+    "BLR-DEL": ["HYD"],
+    "DEL-HYD": ["BLR"],
+    "HYD-DEL": ["BLR"],
+    "DEL-CCU": ["LKO", "BBI"],
+    "CCU-DEL": ["LKO", "BBI"],
+  };
+  
+  const route = `${origin}-${destination}`;
+  if (commonLayovers[route]) {
+    return commonLayovers[route][Math.floor(Math.random() * commonLayovers[route].length)];
+  }
+  
+  // Default layovers if route not found
+  const defaultLayovers = ["DEL", "BOM", "BLR", "HYD"];
+  return defaultLayovers.filter(airport => airport !== origin && airport !== destination)[0] || "DEL";
+}
+
+// Helper function to get layover city name
+function getLayoverCity(origin: string, destination: string): string {
+  const layoverAirport = getLayoverAirport(origin, destination);
+  return getFullCityName(layoverAirport);
+}
+
+// Helper function to generate realistic amenities based on airline
+function generateAmenities(airlineName: string, isDirect: boolean): string[] {
+  const baseAmenities = ["Standard Service", "Wi-Fi"];
+  
+  if (airlineName.includes("Air India") || airlineName.includes("Vistara")) {
+    return [...baseAmenities, "Meal", "Entertainment"];
+  } else if (airlineName.includes("IndiGo") || airlineName.includes("SpiceJet")) {
+    return [...baseAmenities, "Paid Meal"];
+  } else if (airlineName.includes("GoAir")) {
+    return [...baseAmenities, "Snack"];
+  }
+  
+  return baseAmenities;
 }

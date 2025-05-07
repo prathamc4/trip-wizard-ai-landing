@@ -2,7 +2,7 @@
 import React from 'react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { AlertCircle, Bug, RefreshCcw, ExternalLink } from 'lucide-react';
+import { AlertCircle, Bug, RefreshCcw, ExternalLink, Server } from 'lucide-react';
 
 interface ApiStatusProps {
   isUsingSampleData: boolean;
@@ -50,6 +50,14 @@ const ApiDebugStatus: React.FC<ApiStatusProps> = ({
             onClick={() => window.open('https://serpapi.com/google-flights-api', '_blank')}
           >
             <ExternalLink className="h-3 w-3 mr-1" /> API Documentation
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm"
+            className="bg-white hover:bg-gray-100"
+            onClick={() => window.open('https://docs.lovable.dev/integrations/supabase/', '_blank')}
+          >
+            <Server className="h-3 w-3 mr-1" /> Backend Setup Guide
           </Button>
         </div>
       </AlertDescription>

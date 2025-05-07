@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Calendar } from '@/components/ui/calendar';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -8,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CalendarIcon, Search, Loader, Map, Hotel, Users } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import SearchResults from '@/components/SearchResults';
 import { toast } from 'sonner';
@@ -120,11 +121,16 @@ const TravelPlanningSection = () => {
     }
     
     // Fix for the date issue - ensure correct timezone handling
-    // Format dates for API in YYYY-MM-DD format without timezone issues
     const formatDateForAPI = (date: Date | undefined): string => {
       if (!date) return '';
-      // This will keep the date as selected without timezone adjustments
-      return format(date, 'yyyy-MM-dd');
+      
+      // Create a new date object to avoid timezone issues
+      // This ensures we use the selected date exactly as displayed to the user
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      
+      return `${year}-${month}-${day}`;
     };
     
     // Store search data in session storage for components to access
@@ -138,6 +144,8 @@ const TravelPlanningSection = () => {
       preferences,
       transportMode
     };
+    
+    console.log('Search data with fixed dates:', searchData);
     sessionStorage.setItem('travelSearchData', JSON.stringify(searchData));
     
     setIsSearching(true);
