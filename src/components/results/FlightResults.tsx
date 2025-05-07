@@ -31,6 +31,7 @@ const FlightResults: React.FC = () => {
         let origin = 'DEL';
         let destination = 'BOM';
         let departureDate = '2025-05-15';
+        let returnDate = '2025-05-19'; // Initialize returnDate with an empty string or a default value
 
         if (searchData) {
           const parsedData = JSON.parse(searchData);
@@ -41,6 +42,10 @@ const FlightResults: React.FC = () => {
             const date = new Date(parsedData.startDate);
             departureDate = date.toISOString().split('T')[0];
           }
+          if (parsedData.endDate) {
+            const date = new Date(parsedData.endDate);
+            returnDate = date.toISOString().split('T')[0];
+          }
         }
 
         // Fetch flights
@@ -48,6 +53,7 @@ const FlightResults: React.FC = () => {
           origin,
           destination,
           departureDate,
+          returnDate,
           adults: 1,
           currency: 'INR'
         });
