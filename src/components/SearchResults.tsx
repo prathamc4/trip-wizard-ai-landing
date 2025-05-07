@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { TabsContent } from '@/components/ui/tabs';
 import FlightResults from '@/components/results/FlightResults';
@@ -12,7 +11,6 @@ import { useEffect, useState } from 'react';
 import ApiDebugStatus from './ApiDebugStatus';
 import { toast } from 'sonner';
 import { Button } from './ui/button';
-import { useSelection } from '@/context/SelectionContext';
 
 interface SearchResultsProps {
   activeTab: string;
@@ -26,7 +24,6 @@ interface DestinationInfo {
 }
 
 const SearchResults: React.FC<SearchResultsProps> = ({ activeTab }) => {
-  const { selectedFlight, selectedHotel, totalCost } = useSelection();
   const [destinationInfo, setDestinationInfo] = useState<DestinationInfo>({
     airQuality: 'Moderate',
     weatherAlert: 'Monsoon season (June-September). Occasional heavy rainfall expected.',
@@ -173,37 +170,6 @@ const SearchResults: React.FC<SearchResultsProps> = ({ activeTab }) => {
     );
   };
 
-  // Create a summary of selected items
-  const getSelectionSummary = () => {
-    if (!selectedFlight && !selectedHotel) return null;
-    
-    return (
-      <div className="mb-4 p-3 bg-blue-50 border border-blue-100 rounded-md">
-        <h4 className="text-sm font-medium mb-2 text-blue-800">Your Selections</h4>
-        <div className="flex flex-wrap gap-3 text-xs">
-          {selectedFlight && (
-            <div className="flex items-center bg-white px-2 py-1 rounded border border-blue-100">
-              <span className="text-travel-blue">Flight:</span>
-              <span className="ml-1">{selectedFlight.airline} • ₹{selectedFlight.price.toLocaleString()}</span>
-            </div>
-          )}
-          {selectedHotel && (
-            <div className="flex items-center bg-white px-2 py-1 rounded border border-blue-100">
-              <span className="text-purple-700">Hotel:</span>
-              <span className="ml-1">{selectedHotel.name} • ₹{selectedHotel.price.toLocaleString()}/night</span>
-            </div>
-          )}
-          {(selectedFlight || selectedHotel) && (
-            <div className="flex items-center bg-white px-2 py-1 rounded border border-blue-100">
-              <span className="text-green-700">Total:</span>
-              <span className="ml-1">₹{totalCost.toLocaleString()}</span>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  };
-
   return (
     <>
       <div className="flex justify-between items-center mb-4">
@@ -228,8 +194,6 @@ const SearchResults: React.FC<SearchResultsProps> = ({ activeTab }) => {
           </AlertDescription>
         </Alert>
       )}
-
-      {getSelectionSummary()}
 
       <div className="mb-6 space-y-3">
         <Alert variant="warning" className="bg-amber-50 border-amber-200">

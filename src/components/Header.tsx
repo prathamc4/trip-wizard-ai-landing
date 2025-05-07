@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import Logo from '@/components/Logo';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -30,7 +29,12 @@ const Header = () => {
       <div className="container-custom flex items-center justify-between">
         {/* Logo */}
         <a href="#" className="flex items-center">
-          <Logo variant={isScrolled ? 'default' : 'light'} />
+          <span className={cn(
+            'text-2xl font-bold transition-colors', 
+            isScrolled ? 'text-travel-blue' : 'text-white'
+          )}>
+            AI Travel Planner
+          </span>
         </a>
 
         {/* Desktop Navigation */}
