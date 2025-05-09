@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import TripCard from '@/components/trips/TripCard';
@@ -16,9 +16,12 @@ import {
   SelectValue
 } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { ChevronLeft, Search, SortAsc, Bookmark, CalendarRange } from 'lucide-react';
+import { ChevronLeft, Search, SortAsc, Bookmark, CalendarRange, Plus } from 'lucide-react';
+import { useItinerary } from '@/contexts/ItineraryContext';
 
 const MyTrips = () => {
+  const navigate = useNavigate();
+  const { clearSelections } = useItinerary();
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<string>('date-desc');
@@ -80,6 +83,18 @@ const MyTrips = () => {
     } else {
       toast.error('Failed to delete trip');
     }
+  };
+  
+  // Handle planning a new trip
+  const handlePlanNewTrip = () => {
+    // Clear any existing selections and search data
+    clearSelections();
+    
+    // Navigate to the home page
+    navigate('/');
+    
+    // Show a toast to guide the user
+    toast.info('Start planning your new trip below');
   };
 
   // Render loading state
@@ -163,8 +178,9 @@ const MyTrips = () => {
                 'No trips match your search criteria.' : 
                 'Create and save an itinerary to see it here'}
             </p>
-            <Button asChild>
-              <Link to="/">Plan a New Trip</Link>
+            <Button onClick={handlePlanNewTrip} className="flex items-center gap-2">
+              <Plus className="h-4 w-4" /> 
+              Plan a New Trip
             </Button>
           </div>
         ) : (

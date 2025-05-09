@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Trip } from '@/services/tripService';
 import { Button } from '@/components/ui/button';
@@ -22,8 +22,29 @@ interface TripCardProps {
   onDelete: (id: string) => void;
 }
 
+// Define a list of fallback images for destinations
+const destinationImages: Record<string, string> = {
+  'Delhi': 'https://source.unsplash.com/featured/?delhi,india',
+  'Mumbai': 'https://source.unsplash.com/featured/?mumbai,gateway',
+  'Bangalore': 'https://source.unsplash.com/featured/?bangalore,garden',
+  'Goa': 'https://source.unsplash.com/featured/?goa,beach',
+  'Chennai': 'https://source.unsplash.com/featured/?chennai,marina',
+  'Kolkata': 'https://source.unsplash.com/featured/?kolkata,howrah',
+  'Jaipur': 'https://source.unsplash.com/featured/?jaipur,palace',
+  'Agra': 'https://source.unsplash.com/featured/?agra,tajmahal',
+  'Varanasi': 'https://source.unsplash.com/featured/?varanasi,ganges',
+  'Udaipur': 'https://source.unsplash.com/featured/?udaipur,palace',
+  'Kerala': 'https://source.unsplash.com/featured/?kerala,backwaters',
+  'Shimla': 'https://source.unsplash.com/featured/?shimla,snow',
+  'Manali': 'https://source.unsplash.com/featured/?manali,mountain',
+  'Darjeeling': 'https://source.unsplash.com/featured/?darjeeling,tea',
+  'Rajasthan': 'https://source.unsplash.com/featured/?rajasthan,desert'
+};
+
 const TripCard: React.FC<TripCardProps> = ({ trip, onDelete }) => {
   const [expanded, setExpanded] = useState(false);
+  const [imageUrl, setImageUrl] = useState<string>('');
+  const [imageError, setImageError] = useState(false);
 
   // Format dates for display
   const formatDate = (dateString: string) => {
@@ -38,13 +59,47 @@ const TripCard: React.FC<TripCardProps> = ({ trip, onDelete }) => {
   // Calculate when the trip was saved
   const savedTimeAgo = formatDistanceToNow(new Date(trip.createdAt), { addSuffix: true });
 
+  // Function to get the best image for the trip
+  useEffect(() => {
+    const getDestinationImage = () => {
+      // First try the provided cover image
+      if (trip.coverImage && !imageError) {
+        setImageUrl(trip.coverImage);
+        return;
+      }
+
+      // Otherwise, try to match with our predefined destination images
+      const destination = trip.destination.split(',')[0].trim();
+      
+      // Find a matching destination or closest match
+      for (const [key, url] of Object.entries(destinationImages)) {
+        if (destination.toLowerCase().includes(key.toLowerCase())) {
+          setImageUrl(url);
+          return;
+        }
+      }
+      
+      // Generic India travel fallback
+      setImageUrl(`https://source.unsplash.com/featured/?${encodeURIComponent(trip.destination)},travel,india`);
+    };
+
+    getDestinationImage();
+  }, [trip.destination, trip.coverImage, imageError]);
+
+  const handleImageError = () => {
+    setImageError(true);
+    // Fallback to a generic travel image
+    setImageUrl(`https://source.unsplash.com/featured/?travel,india`);
+  };
+
   return (
     <Card className="w-full overflow-hidden transition-all duration-300">
       <div className="h-48 w-full overflow-hidden relative">
         <img 
-          src={trip.coverImage || `https://source.unsplash.com/featured/?${encodeURIComponent(trip.destination)},travel`} 
+          src={imageUrl} 
           alt={trip.destination} 
           className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
+          onError={handleImageError}
         />
         <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/70"></div>
         <div className="absolute bottom-4 left-4 right-4 text-white">

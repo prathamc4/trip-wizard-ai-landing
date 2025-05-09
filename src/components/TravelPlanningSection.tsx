@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
@@ -17,11 +17,12 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { CalendarIcon, Search, Loader, Map, Hotel, Users } from "lucide-react";
+import { CalendarIcon, Search, Loader, Map, Hotel, Users, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import SearchResults from "@/components/SearchResults";
 import { toast } from "sonner";
+import { useItinerary } from "@/contexts/ItineraryContext";
 
 // Indian cities for autocomplete
 const indianCities = [
@@ -121,6 +122,31 @@ const TravelPlanningSection = () => {
   const [filteredDestCities, setFilteredDestCities] = useState<string[]>([]);
   const [showStartCities, setShowStartCities] = useState(false);
   const [showDestCities, setShowDestCities] = useState(false);
+  
+  // Get the clearSelections function from context
+  const { clearSelections } = useItinerary();
+
+  // Clear form inputs on component mount
+  useEffect(() => {
+    resetSearchForm();
+  }, []);
+
+  // Function to reset the search form
+  const resetSearchForm = () => {
+    setStartLocation("");
+    setDestination("");
+    setStartDate(undefined);
+    setEndDate(undefined);
+    setBudget([2000]);
+    setTravelers("1");
+    setPreferences([]);
+    setTransportMode("flight");
+    setShowResults(false);
+    setActiveTab("flights");
+    
+    // Also clear the itinerary selections
+    clearSelections();
+  };
 
   const handleCheckboxChange = (value: string, checked: boolean) => {
     setPreferences((prev) => {
@@ -243,6 +269,21 @@ const TravelPlanningSection = () => {
           </h2>
 
           <div className="bg-white rounded-xl shadow-lg p-6 md:p-8 mb-8 bg-opacity-90 backdrop-blur-sm">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-semibold">Search for Trips</h3>
+              {showResults && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={resetSearchForm}
+                  className="flex items-center gap-2"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  Start New Trip
+                </Button>
+              )}
+            </div>
+            
             <form onSubmit={handleSearch} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2 relative">

@@ -23,7 +23,7 @@ const SaveTripButton = () => {
   const [notes, setNotes] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   
-  const { hasUserSelections, saveCurrentItinerary, totalBudget } = useItinerary();
+  const { hasUserSelections, saveCurrentItinerary, totalBudget, clearSelections } = useItinerary();
   
   // Function to handle saving the itinerary
   const handleSaveTrip = async (itineraryDays: any[]) => {
@@ -32,6 +32,13 @@ const SaveTripButton = () => {
       const tripId = await saveCurrentItinerary(itineraryDays, notes);
       
       if (tripId) {
+        // Close dialog
+        setIsOpen(false);
+        
+        // Clear notes field for next time
+        setNotes('');
+        
+        // Show success toast with option to view trips
         toast.success(
           <div>
             <p>Itinerary saved successfully!</p>
@@ -45,7 +52,9 @@ const SaveTripButton = () => {
           </div>,
           { duration: 5000 }
         );
-        setIsOpen(false);
+        
+        // Clear the form state
+        clearSelections();
       } else {
         toast.error('Failed to save itinerary');
       }
@@ -80,8 +89,7 @@ const SaveTripButton = () => {
         
         activities.push({
           time,
-          title,
-          description,
+          activity: title || description,
           cost,
           type,
           icon,

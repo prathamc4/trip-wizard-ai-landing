@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { FlightResult } from '@/utils/api/flightAPI';
 import { HotelResult } from '@/utils/api/hotelAPI';
 import { AttractionResult } from '@/utils/api/attractionsAPI';
@@ -34,10 +34,15 @@ interface ItineraryProviderProps {
   children: ReactNode;
 }
 
-export const ItineraryProvider = ({ children }: ItineraryProviderProps) => {
+export const ItineraryProvider: React.FC<ItineraryProviderProps> = ({ children }) => {
   const [selectedFlight, setSelectedFlight] = useState<FlightResult | null>(null);
   const [selectedHotel, setSelectedHotel] = useState<HotelResult | null>(null);
   const [selectedAttractions, setSelectedAttractions] = useState<AttractionResult[]>([]);
+  
+  // Clear all selections when component mounts
+  useEffect(() => {
+    clearSelections();
+  }, []);
 
   const selectFlight = (flight: FlightResult | null) => {
     setSelectedFlight(flight);
@@ -62,6 +67,9 @@ export const ItineraryProvider = ({ children }: ItineraryProviderProps) => {
     setSelectedFlight(null);
     setSelectedHotel(null);
     setSelectedAttractions([]);
+    
+    // Also clear search params from sessionStorage
+    sessionStorage.removeItem('travelSearchData');
   };
 
   // Calculate total budget
@@ -99,8 +107,33 @@ export const ItineraryProvider = ({ children }: ItineraryProviderProps) => {
       const end = new Date(endDate);
       const duration = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
 
-      // Prepare budget breakdown
+      // Calculate all budget components in detail
+      let totalCalculatedBudget = totalBudget;
+      
+      // If total budget is too low (which may happen if user didn't select much),
+      // set a minimum budget based on duration
+      if (totalCalculatedBudget < 1000 * duration) {
+        totalCalculatedBudget = 1000 * duration;
+      }
+      
+      // Prepare budget breakdown with more realistic distribution
       const budgetBreakdown = calculateBudgetBreakdown(itineraryDays);
+      
+      // Add minimum values for any categories that are too low
+      if (budgetBreakdown.accommodation < 500 * duration) {
+        budgetBreakdown.accommodation = 500 * duration;
+      }
+      
+      if (budgetBreakdown.food < 300 * duration) {
+        budgetBreakdown.food = 300 * duration;
+      }
+      
+      if (budgetBreakdown.transportation < 200 * duration) {
+        budgetBreakdown.transportation = 200 * duration;
+      }
+      
+      // Recalculate total budget after adjustments
+      const adjustedTotalBudget = Object.values(budgetBreakdown).reduce((sum, value) => sum + value, 0);
 
       // Prepare trip data
       const tripData = {
@@ -108,7 +141,7 @@ export const ItineraryProvider = ({ children }: ItineraryProviderProps) => {
         startDate,
         endDate,
         duration,
-        totalBudget,
+        totalBudget: adjustedTotalBudget,
         currency: "INR",
         budgetBreakdown,
         itinerary: itineraryDays,
@@ -118,6 +151,9 @@ export const ItineraryProvider = ({ children }: ItineraryProviderProps) => {
 
       // Save trip
       const savedTrip = saveTrip(tripData);
+      
+      // Clear selections after successful save
+      clearSelections();
       
       return savedTrip.id;
     } catch (error) {
