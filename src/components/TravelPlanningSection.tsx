@@ -497,14 +497,6 @@ const TravelPlanningSection = () => {
             </div>
           )}
         </div>
-
-        <div className="hidden lg:block absolute right-0 bottom-0 w-64 h-64 opacity-20 pointer-events-none">
-          <img
-            src="https://lovable.dev/wp-content/uploads/plane-travel-illustration.png"
-            alt="Travel illustration"
-            className="w-full h-full object-contain"
-          />
-        </div>
       </div>
     </section>
   );
