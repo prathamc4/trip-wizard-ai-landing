@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Trip } from '@/services/tripService';
@@ -176,7 +175,7 @@ const TripCard: React.FC<TripCardProps> = ({ trip, onDelete }) => {
                           </span>
                         )}
                       </div>
-                      <div>{activity.activity || activity.title}</div>
+                      <div>{activity.activity}</div>
                       {activity.location && (
                         <div className="text-xs text-gray-600 flex items-center mt-1">
                           <MapPin className="h-3 w-3 mr-0.5" />
