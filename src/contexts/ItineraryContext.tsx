@@ -13,6 +13,7 @@ interface ItineraryContextType {
   addAttraction: (attraction: AttractionResult) => void;
   removeAttraction: (attractionId: number) => void;
   clearSelections: () => void;
+  hasUserSelections: boolean;
 }
 
 const ItineraryContext = createContext<ItineraryContextType | undefined>(undefined);
@@ -59,6 +60,9 @@ export const ItineraryProvider: React.FC<ItineraryProviderProps> = ({ children }
     setSelectedAttractions([]);
   };
 
+  // Add computed property to check if any user selections exist
+  const hasUserSelections = Boolean(selectedFlight || selectedHotel || selectedAttractions.length > 0);
+
   return (
     <ItineraryContext.Provider value={{
       selectedFlight,
@@ -69,6 +73,7 @@ export const ItineraryProvider: React.FC<ItineraryProviderProps> = ({ children }
       addAttraction,
       removeAttraction,
       clearSelections,
+      hasUserSelections,
     }}>
       {children}
     </ItineraryContext.Provider>

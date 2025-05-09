@@ -1,18 +1,21 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Pencil, Shuffle, Clock, MapPin, Bed, Coffee, Camera, Car, Plane, Building, IndianRupee, Utensils, Loader, X } from 'lucide-react';
+import { Pencil, Shuffle, Clock, MapPin, Bed, Coffee, Camera, Car, Plane, Building, IndianRupee, Utensils, Loader, X, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { generateItinerary, ItineraryDay, Activity } from '@/utils/api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useItinerary } from '@/contexts/ItineraryContext';
 import { Card, CardContent } from '@/components/ui/card';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 const ItineraryResults: React.FC = () => {
   const [itinerary, setItinerary] = useState<ItineraryDay[]>([]);
   const [languagePreference, setLanguagePreference] = useState("english");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showingUserSelections, setShowingUserSelections] = useState(true);
   
   // Get selected items from context
   const { 
@@ -21,7 +24,9 @@ const ItineraryResults: React.FC = () => {
     selectedAttractions, 
     selectFlight, 
     selectHotel, 
-    removeAttraction 
+    removeAttraction,
+    clearSelections,
+    hasUserSelections
   } = useItinerary();
 
   useEffect(() => {
@@ -79,160 +84,153 @@ const ItineraryResults: React.FC = () => {
 
   // Function to incorporate selected flight into itinerary
   useEffect(() => {
-    if (!loading && itinerary.length > 0) {
-      if (selectedFlight) {
-        // Create a deep copy of the itinerary
-        let updatedItinerary = JSON.parse(JSON.stringify(itinerary));
-        
-        // Add or update flight in day 1
-        const flightActivity: Activity = {
-          id: `flight-${selectedFlight.id}`,
-          time: selectedFlight.departureTime,
-          type: 'transport',
-          title: `Flight: ${selectedFlight.departureCity} to ${selectedFlight.arrivalCity}`,
-          description: `${selectedFlight.airline} ${selectedFlight.flightNumber}`,
-          icon: 'plane',
-          cost: selectedFlight.price,
-          notes: `Departure: ${selectedFlight.departureAirport} | Arrival: ${selectedFlight.arrivalAirport} | Duration: ${selectedFlight.duration}`
-        };
-        
-        // Check if flight activity already exists
-        const flightIndex = updatedItinerary[0].activities.findIndex(
-          (act) => act.type === 'transport' && act.icon === 'plane'
-        );
-        
-        if (flightIndex !== -1) {
-          // Update existing flight
-          updatedItinerary[0].activities[flightIndex] = flightActivity;
-        } else {
-          // Add new flight at the beginning of day 1
-          updatedItinerary[0].activities.unshift(flightActivity);
-          
-          // Sort activities by time
-          updatedItinerary[0].activities.sort((a, b) => {
-            const timeA = parseInt(a.time.replace(/[^0-9]/g, ''));
-            const timeB = parseInt(b.time.replace(/[^0-9]/g, ''));
-            return a.time.includes('PM') && !a.time.includes('12:') ? timeA + 1200 : timeA - 
-                  (b.time.includes('PM') && !b.time.includes('12:') ? timeB + 1200 : timeB);
-          });
-        }
-        
-        setItinerary(updatedItinerary);
+    if (!loading && itinerary.length > 0 && selectedFlight) {
+      // Create a deep copy of the itinerary
+      let updatedItinerary = JSON.parse(JSON.stringify(itinerary));
+      
+      // Add or update flight in day 1
+      const flightActivity: Activity = {
+        id: `flight-${selectedFlight.id}`,
+        time: selectedFlight.departureTime,
+        type: 'transport',
+        title: `Flight: ${selectedFlight.departureCity} to ${selectedFlight.arrivalCity}`,
+        description: `${selectedFlight.airline} ${selectedFlight.flightNumber}`,
+        icon: 'plane',
+        cost: selectedFlight.price,
+        notes: `Departure: ${selectedFlight.departureAirport} | Arrival: ${selectedFlight.arrivalAirport} | Duration: ${selectedFlight.duration}`
+      };
+      
+      // Check if flight activity already exists
+      const flightIndex = updatedItinerary[0].activities.findIndex(
+        (act) => act.type === 'transport' && act.icon === 'plane'
+      );
+      
+      if (flightIndex !== -1) {
+        // Update existing flight
+        updatedItinerary[0].activities[flightIndex] = flightActivity;
+      } else {
+        // Add new flight at the beginning of day 1
+        updatedItinerary[0].activities.unshift(flightActivity);
       }
+      
+      // Sort activities by time
+      updatedItinerary[0].activities.sort((a, b) => {
+        const timeA = parseInt(a.time.replace(/[^0-9]/g, ''));
+        const timeB = parseInt(b.time.replace(/[^0-9]/g, ''));
+        return a.time.includes('PM') && !a.time.includes('12:') ? timeA + 1200 : timeA - 
+              (b.time.includes('PM') && !b.time.includes('12:') ? timeB + 1200 : timeB);
+      });
+      
+      setItinerary(updatedItinerary);
     }
-  }, [selectedFlight, loading, itinerary]);
+  }, [selectedFlight, loading]);
 
   // Function to incorporate selected hotel into itinerary
   useEffect(() => {
-    if (!loading && itinerary.length > 0) {
-      if (selectedHotel) {
-        // Create a deep copy of the itinerary
-        let updatedItinerary = JSON.parse(JSON.stringify(itinerary));
-        
-        // Add or update hotel in day 1
-        const hotelActivity: Activity = {
-          id: `hotel-${selectedHotel.id}`,
-          time: '12:00 PM',
-          type: 'accommodation',
-          title: `Hotel: ${selectedHotel.name}`,
-          description: selectedHotel.description.substring(0, 100) + '...',
-          icon: 'bed',
-          cost: selectedHotel.price,
-          notes: `Rating: ${selectedHotel.rating} stars | Address: ${selectedHotel.address}`
-        };
-        
-        // Check if hotel activity already exists
-        const hotelIndex = updatedItinerary[0].activities.findIndex(
-          (act) => act.type === 'accommodation' && act.icon === 'bed'
-        );
-        
-        if (hotelIndex !== -1) {
-          // Update existing hotel
-          updatedItinerary[0].activities[hotelIndex] = hotelActivity;
-        } else {
-          // Add new hotel (after flight if exists, otherwise at beginning)
-          const flightIndex = updatedItinerary[0].activities.findIndex(
-            (act) => act.type === 'transport' && act.icon === 'plane'
-          );
-          
-          if (flightIndex !== -1) {
-            updatedItinerary[0].activities.splice(flightIndex + 1, 0, hotelActivity);
-          } else {
-            updatedItinerary[0].activities.unshift(hotelActivity);
-          }
-          
-          // Sort activities by time
-          updatedItinerary[0].activities.sort((a, b) => {
-            const timeA = parseInt(a.time.replace(/[^0-9]/g, ''));
-            const timeB = parseInt(b.time.replace(/[^0-9]/g, ''));
-            return a.time.includes('PM') && !a.time.includes('12:') ? timeA + 1200 : timeA - 
-                  (b.time.includes('PM') && !b.time.includes('12:') ? timeB + 1200 : timeB);
-          });
-        }
-        
-        setItinerary(updatedItinerary);
+    if (!loading && itinerary.length > 0 && selectedHotel) {
+      // Create a deep copy of the itinerary
+      let updatedItinerary = JSON.parse(JSON.stringify(itinerary));
+      
+      // Add or update hotel in day 1
+      const hotelActivity: Activity = {
+        id: `hotel-${selectedHotel.id}`,
+        time: '12:00 PM',
+        type: 'accommodation',
+        title: `Hotel: ${selectedHotel.name}`,
+        description: selectedHotel.description.substring(0, 100) + '...',
+        icon: 'bed',
+        cost: selectedHotel.price,
+        notes: `Rating: ${selectedHotel.rating} stars | Address: ${selectedHotel.address}`
+      };
+      
+      // Check if hotel activity already exists
+      const hotelIndex = updatedItinerary[0].activities.findIndex(
+        (act) => act.type === 'accommodation' && act.icon === 'bed'
+      );
+      
+      if (hotelIndex !== -1) {
+        // Update existing hotel
+        updatedItinerary[0].activities[hotelIndex] = hotelActivity;
+      } else {
+        // Add new hotel
+        updatedItinerary[0].activities.push(hotelActivity);
       }
+      
+      // Sort activities by time
+      updatedItinerary[0].activities.sort((a, b) => {
+        const timeA = parseInt(a.time.replace(/[^0-9]/g, ''));
+        const timeB = parseInt(b.time.replace(/[^0-9]/g, ''));
+        return a.time.includes('PM') && !a.time.includes('12:') ? timeA + 1200 : timeA - 
+              (b.time.includes('PM') && !b.time.includes('12:') ? timeB + 1200 : timeB);
+      });
+      
+      setItinerary(updatedItinerary);
     }
-  }, [selectedHotel, loading, itinerary]);
+  }, [selectedHotel, loading]);
 
   // Function to incorporate selected attractions into itinerary
   useEffect(() => {
-    if (!loading && itinerary.length > 0) {
-      if (selectedAttractions.length > 0) {
-        // Create a deep copy of the itinerary
-        let updatedItinerary = JSON.parse(JSON.stringify(itinerary));
+    if (!loading && itinerary.length > 0 && selectedAttractions.length > 0) {
+      // Create a deep copy of the itinerary
+      let updatedItinerary = JSON.parse(JSON.stringify(itinerary));
+      
+      // First, remove any existing selected attractions
+      updatedItinerary = updatedItinerary.map(day => ({
+        ...day,
+        activities: day.activities.filter(activity => !activity.id.startsWith('attraction-'))
+      }));
+      
+      // Distribute attractions across days
+      selectedAttractions.forEach((attraction, index) => {
+        // Determine which day to add the attraction to (distribute evenly)
+        const dayIndex = Math.min(index % updatedItinerary.length, updatedItinerary.length - 1);
         
-        // Distribute attractions across days
-        selectedAttractions.forEach((attraction, index) => {
-          // Determine which day to add the attraction to (distribute evenly)
-          const dayIndex = Math.min(index % updatedItinerary.length, updatedItinerary.length - 1);
+        // Create attraction activity
+        const attractionActivity: Activity = {
+          id: `attraction-${attraction.id}`,
+          time: '10:00 AM', // Default time, will be adjusted later
+          type: 'attraction',
+          title: attraction.name,
+          description: attraction.description,
+          icon: 'camera',
+          cost: showPricing === 'indian' ? attraction.priceIndian : attraction.priceForeigner,
+          notes: `${attraction.location} | ${attraction.timings} | ${attraction.culturalNote || ''}`
+        };
+        
+        // Add new attraction
+        updatedItinerary[dayIndex].activities.push(attractionActivity);
+      });
+      
+      // Adjust times for attractions in each day
+      updatedItinerary.forEach((day, dayIndex) => {
+        // Get only attraction activities
+        const attractionActivities = day.activities.filter(act => act.type === 'attraction');
+        
+        // Assign staggered times between 9 AM and 4 PM
+        attractionActivities.forEach((activity, i) => {
+          const hour = 9 + (i % 7);
+          const amPm = hour >= 12 ? 'PM' : 'AM';
+          const hour12 = hour > 12 ? hour - 12 : hour;
           
-          // Create attraction activity
-          const attractionActivity: Activity = {
-            id: `attraction-${attraction.id}`,
-            time: '10:00 AM', // Default time, will be adjusted later
-            type: 'attraction',
-            title: attraction.name,
-            description: attraction.description,
-            icon: 'camera',
-            cost: showPricing === 'indian' ? attraction.priceIndian : attraction.priceForeigner,
-            notes: `${attraction.location} | ${attraction.timings} | ${attraction.culturalNote || ''}`
-          };
-          
-          // Check if this attraction already exists
-          const existingIndex = updatedItinerary[dayIndex].activities.findIndex(
-            (act) => act.id === `attraction-${attraction.id}`
-          );
-          
-          if (existingIndex === -1) {
-            // Add new attraction
-            updatedItinerary[dayIndex].activities.push(attractionActivity);
-            
-            // Distribute attraction times throughout the day
-            const attractionCount = updatedItinerary[dayIndex].activities.filter(
-              act => act.type === 'attraction'
-            ).length;
-            
-            // Assign staggered times between 9 AM and 4 PM
-            const hour = 9 + (attractionCount % 7);
-            const amPm = hour >= 12 ? 'PM' : 'AM';
-            const hour12 = hour > 12 ? hour - 12 : hour;
-            attractionActivity.time = `${hour12}:00 ${amPm}`;
-            
-            // Sort activities by time
-            updatedItinerary[dayIndex].activities.sort((a, b) => {
-              const timeA = parseInt(a.time.replace(/[^0-9]/g, ''));
-              const timeB = parseInt(b.time.replace(/[^0-9]/g, ''));
-              return a.time.includes('PM') && !a.time.includes('12:') ? timeA + 1200 : timeA - 
-                    (b.time.includes('PM') && !b.time.includes('12:') ? timeB + 1200 : timeB);
-            });
+          // Find the activity in the day's activities and update its time
+          const activityIndex = day.activities.findIndex(a => a.id === activity.id);
+          if (activityIndex !== -1) {
+            updatedItinerary[dayIndex].activities[activityIndex].time = `${hour12}:00 ${amPm}`;
           }
         });
         
-        setItinerary(updatedItinerary);
-      }
+        // Sort activities by time
+        updatedItinerary[dayIndex].activities.sort((a, b) => {
+          const timeA = parseInt(a.time.replace(/[^0-9]/g, ''));
+          const timeB = parseInt(b.time.replace(/[^0-9]/g, ''));
+          return a.time.includes('PM') && !a.time.includes('12:') ? timeA + 1200 : timeA - 
+                (b.time.includes('PM') && !b.time.includes('12:') ? timeB + 1200 : timeB);
+        });
+      });
+      
+      setItinerary(updatedItinerary);
     }
-  }, [selectedAttractions, loading, itinerary]);
+  }, [selectedAttractions, loading]);
 
   const getActivityIcon = (iconName: string) => {
     switch(iconName) {
@@ -356,6 +354,17 @@ const ItineraryResults: React.FC = () => {
     });
   };
 
+  const handleToggleItineraryMode = () => {
+    setShowingUserSelections(prev => !prev);
+    toast.info(showingUserSelections 
+      ? 'Showing default itinerary suggestions' 
+      : 'Showing your personalized selections');
+  };
+
+  const handleConfirmItinerary = () => {
+    toast.success('Itinerary confirmed! Your trip is ready.');
+  };
+
   // Calculate showPricing variable which was used in the attractions effect
   const showPricing = 'indian';
 
@@ -403,7 +412,7 @@ const ItineraryResults: React.FC = () => {
   // Calculate total cost including selected items
   const calculateTotalCost = () => {
     let total = itinerary.reduce((total, day) => {
-      return total + day.activities.reduce((dayTotal, activity) => dayTotal + activity.cost, 0);
+      return total + day.activities.reduce((dayTotal, activity) => dayTotal + (activity.cost || 0), 0);
     }, 0);
 
     return total;
@@ -417,7 +426,38 @@ const ItineraryResults: React.FC = () => {
     
     return (
       <div className="mb-6">
-        <h4 className="font-semibold text-lg mb-3">Your Selected Items</h4>
+        <div className="flex justify-between items-center mb-3">
+          <h4 className="font-semibold text-lg">Your Selected Items</h4>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="outline" size="sm" className="text-red-500 border-red-200 hover:bg-red-50">
+                <Trash2 className="h-4 w-4 mr-1" />
+                Clear All
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Clear all selections?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will remove all your selected flights, hotels, and attractions from the itinerary.
+                  This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction 
+                  onClick={() => {
+                    clearSelections();
+                    toast.info("All selections cleared");
+                  }}
+                  className="bg-red-500 hover:bg-red-600"
+                >
+                  Clear All
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
         <div className="grid grid-cols-1 gap-3">
           {selectedFlight && (
             <Card className="overflow-hidden bg-blue-50 border-blue-200">
@@ -543,6 +583,13 @@ const ItineraryResults: React.FC = () => {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Button 
+            variant="outline"
+            onClick={handleToggleItineraryMode}
+            className={showingUserSelections ? "border-blue-300 bg-blue-50" : ""}
+          >
+            {showingUserSelections ? "Show Default Suggestions" : "Show Your Selections"}
+          </Button>
           <Button variant="outline" onClick={handleLanguageToggle}>
             {toggleLanguageText}
           </Button>
@@ -571,6 +618,31 @@ const ItineraryResults: React.FC = () => {
         </div>
       </div>
       
+      {hasUserSelections && (
+        <div className="flex justify-center">
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button>Finalize Itinerary</Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Confirm Your Travel Itinerary</AlertDialogTitle>
+                <AlertDialogDescription>
+                  You're about to finalize your travel itinerary with your selected items. 
+                  Once confirmed, you'll be able to download and share your complete travel plan.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>I need to make changes</AlertDialogCancel>
+                <AlertDialogAction onClick={handleConfirmItinerary}>
+                  Confirm Itinerary
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      )}
+      
       <div className="space-y-8">
         {itinerary.map((day, dayIdx) => (
           <div key={`day-${day.day}`} className="space-y-3">
@@ -597,6 +669,15 @@ const ItineraryResults: React.FC = () => {
                   (activity.id.startsWith('hotel-') && selectedHotel) ||
                   (activity.id.startsWith('attraction-') && 
                     selectedAttractions.some(attr => `attraction-${attr.id}` === activity.id));
+
+                // If we're showing only user selections and this isn't selected, skip it
+                if (showingUserSelections && !isUserSelected && (
+                  activity.id.startsWith('flight-') || 
+                  activity.id.startsWith('hotel-') || 
+                  activity.id.startsWith('attraction-')
+                )) {
+                  return null;
+                }
                 
                 return (
                   <div key={activity.id} className="pl-12 relative">
@@ -611,9 +692,16 @@ const ItineraryResults: React.FC = () => {
                     {/* Activity content */}
                     <div className={`border p-3 rounded-lg hover:shadow-sm transition-shadow ${
                       isUserSelected ? 'bg-blue-50 border-blue-200' : 'bg-white'
-                    }`}>
+                    } ${!isUserSelected && (activity.id.startsWith('flight-') || activity.id.startsWith('hotel-') || activity.id.startsWith('attraction-')) ? 'opacity-70' : ''}`}>
                       <div className="flex justify-between">
-                        <h5 className="font-medium">{activity.title}</h5>
+                        <div className="flex items-center gap-2">
+                          <h5 className="font-medium">{activity.title}</h5>
+                          {isUserSelected && (
+                            <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-200 border-blue-200">
+                              Your Selection
+                            </Badge>
+                          )}
+                        </div>
                         <div className="flex">
                           {isUserSelected && (
                             <Button 
@@ -658,7 +746,7 @@ const ItineraryResults: React.FC = () => {
                     </div>
                   </div>
                 );
-              })}
+              }).filter(Boolean)}
             </div>
           </div>
         ))}

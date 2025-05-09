@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { TabsContent } from '@/components/ui/tabs';
 import FlightResults from '@/components/results/FlightResults';
@@ -12,6 +13,7 @@ import ApiDebugStatus from './ApiDebugStatus';
 import { toast } from 'sonner';
 import { Button } from './ui/button';
 import { useItinerary } from '@/contexts/ItineraryContext';
+import { Badge } from './ui/badge';
 
 interface SearchResultsProps {
   activeTab: string;
@@ -181,8 +183,11 @@ const SearchResults: React.FC<SearchResultsProps> = ({ activeTab }) => {
         <h3 className="text-xl font-semibold">Search Results</h3>
         <div className="flex items-center gap-3">
           {selectedItemsCount > 0 && (
-            <div className="text-sm">
-              <span className="font-medium">{selectedItemsCount}</span> item{selectedItemsCount !== 1 ? 's' : ''} selected
+            <div className="flex items-center">
+              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                <span className="font-medium">{selectedItemsCount}</span> 
+                <span className="ml-1">item{selectedItemsCount !== 1 ? 's' : ''} selected</span>
+              </Badge>
             </div>
           )}
           <SaveTripButton />
