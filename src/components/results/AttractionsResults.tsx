@@ -84,6 +84,11 @@ const AttractionsResults: React.FC = () => {
     }
   };
 
+  const handleTogglePricing = () => {
+    setShowPricing(prev => prev === 'indian' ? 'foreign' : 'indian');
+    toast.info(`Showing ${showPricing === 'indian' ? 'foreign' : 'indian'} pricing`);
+  };
+
   // Filter attractions by category
   const filteredAttractions = activeCategory === 'all' 
     ? attractions 

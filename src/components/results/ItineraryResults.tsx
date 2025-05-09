@@ -331,6 +331,31 @@ const ItineraryResults: React.FC = () => {
     toast.success('Opening WhatsApp sharing...');
   };
 
+  // Add the missing handleRemoveSelectedItem function
+  const handleRemoveSelectedItem = (itemId: string) => {
+    if (itemId.startsWith('flight-') && selectedFlight) {
+      selectFlight(null);
+      toast.info('Flight removed from itinerary');
+    } 
+    else if (itemId.startsWith('hotel-') && selectedHotel) {
+      selectHotel(null);
+      toast.info('Hotel removed from itinerary');
+    } 
+    else if (itemId.startsWith('attraction-')) {
+      const attractionId = Number(itemId.replace('attraction-', ''));
+      removeAttraction(attractionId);
+      toast.info('Attraction removed from itinerary');
+    }
+    
+    // Update the itinerary by filtering out the removed item
+    setItinerary(prev => {
+      return prev.map(day => ({
+        ...day,
+        activities: day.activities.filter(activity => activity.id !== itemId)
+      }));
+    });
+  };
+
   // Calculate showPricing variable which was used in the attractions effect
   const showPricing = 'indian';
 
