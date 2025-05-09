@@ -170,7 +170,7 @@ function transformSerpAPIHotelResponse(
       const priceString =
         hotel.rate_per_night?.lowest || hotel.total_rate?.lowest;
       const price = priceString
-        ? parseInt(priceString.replace(/[^\d]/g, ""))
+        ? parseInt(priceString.replace(/[^\d]/g, ""))*85
         : 2000 + Math.floor(Math.random() * 8000);
 
       return {
