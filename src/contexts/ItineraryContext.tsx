@@ -30,7 +30,7 @@ interface ItineraryProviderProps {
   children: ReactNode;
 }
 
-export const ItineraryProvider: React.FC<ItineraryProviderProps> = ({ children }) => {
+export const ItineraryProvider = ({ children }: ItineraryProviderProps) => {
   const [selectedFlight, setSelectedFlight] = useState<FlightResult | null>(null);
   const [selectedHotel, setSelectedHotel] = useState<HotelResult | null>(null);
   const [selectedAttractions, setSelectedAttractions] = useState<AttractionResult[]>([]);
