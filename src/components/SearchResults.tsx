@@ -11,6 +11,7 @@ import { useEffect, useState } from 'react';
 import ApiDebugStatus from './ApiDebugStatus';
 import { toast } from 'sonner';
 import { Button } from './ui/button';
+import { useItinerary } from '@/contexts/ItineraryContext';
 
 interface SearchResultsProps {
   activeTab: string;
@@ -37,6 +38,10 @@ const SearchResults: React.FC<SearchResultsProps> = ({ activeTab }) => {
     itinerary: { error: false, errorMessage: '' }
   });
   const [demoModeActive, setDemoModeActive] = useState(false);
+  
+  // Get itinerary context to display selection stats
+  const { selectedFlight, selectedHotel, selectedAttractions } = useItinerary();
+  const selectedItemsCount = (selectedFlight ? 1 : 0) + (selectedHotel ? 1 : 0) + selectedAttractions.length;
 
   useEffect(() => {
     // Load destination information based on the search
@@ -90,7 +95,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ activeTab }) => {
       }
     };
     
-    // Check if SERPAPI key is available
+    // Check if API key is available
     const checkApiKeys = () => {
       const hasApiKey = import.meta.env.VITE_SERPAPI_KEY || 
                         import.meta.env.VITE_GEMINI_API_KEY || 
@@ -174,7 +179,14 @@ const SearchResults: React.FC<SearchResultsProps> = ({ activeTab }) => {
     <>
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-xl font-semibold">Search Results</h3>
-        <SaveTripButton />
+        <div className="flex items-center gap-3">
+          {selectedItemsCount > 0 && (
+            <div className="text-sm">
+              <span className="font-medium">{selectedItemsCount}</span> item{selectedItemsCount !== 1 ? 's' : ''} selected
+            </div>
+          )}
+          <SaveTripButton />
+        </div>
       </div>
       
       {demoModeActive && (

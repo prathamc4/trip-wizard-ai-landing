@@ -1,13 +1,13 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Star, Heart, Plus, MapPin, Clock, IndianRupee, Info, Loader } from 'lucide-react';
+import { Star, Heart, Plus, MapPin, Clock, IndianRupee, Info, Loader, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
 import { fetchAttractions, AttractionResult } from '@/utils/api';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useItinerary } from '@/contexts/ItineraryContext';
 
 const AttractionsResults: React.FC = () => {
   const [savedAttractions, setSavedAttractions] = useState<number[]>([]);
@@ -17,6 +17,9 @@ const AttractionsResults: React.FC = () => {
   const [categories, setCategories] = useState<string[]>(['all']);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Use the itinerary context
+  const { selectedAttractions, addAttraction, removeAttraction } = useItinerary();
 
   useEffect(() => {
     const loadAttractions = async () => {
@@ -68,11 +71,17 @@ const AttractionsResults: React.FC = () => {
   };
 
   const handleAddToItinerary = (attraction: AttractionResult) => {
-    toast.success(`${attraction.name} added to itinerary!`);
-  };
-
-  const handleTogglePricing = () => {
-    setShowPricing(prev => prev === 'indian' ? 'foreign' : 'indian');
+    const isSelected = selectedAttractions.some(attr => attr.id === attraction.id);
+    
+    if (isSelected) {
+      // Remove from itinerary if already selected
+      removeAttraction(attraction.id);
+      toast.info(`${attraction.name} removed from itinerary`);
+    } else {
+      // Add to itinerary
+      addAttraction(attraction);
+      toast.success(`${attraction.name} added to itinerary!`);
+    }
   };
 
   // Filter attractions by category
@@ -193,92 +202,109 @@ const AttractionsResults: React.FC = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredAttractions.map((attraction) => (
-            <Card key={attraction.id} className="overflow-hidden group hover:shadow-md transition-all duration-200">
-              <div className="relative h-48 overflow-hidden">
-                <img 
-                  src={attraction.image} 
-                  alt={attraction.name}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).onerror = null;
-                    (e.target as HTMLImageElement).src = 'https://placehold.co/600x400/e2e8f0/a0aec0?text=Attraction';
-                  }}
-                />
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="absolute top-2 right-2 bg-white/80 hover:bg-white"
-                  onClick={() => handleSaveToggle(attraction.id)}
-                >
-                  <Heart className={`h-5 w-5 ${savedAttractions.includes(attraction.id) ? 'fill-pink-500 text-pink-500' : ''}`} />
-                </Button>
-                <div className="absolute top-0 left-0 bg-black/70 text-white px-3 py-1 text-xs">
-                  {attraction.category}
+          {filteredAttractions.map((attraction) => {
+            const isSelected = selectedAttractions.some(attr => attr.id === attraction.id);
+            return (
+              <Card 
+                key={attraction.id} 
+                className={`overflow-hidden group hover:shadow-md transition-all duration-200 ${
+                  isSelected ? "ring-2 ring-primary ring-offset-1" : ""
+                }`}
+              >
+                <div className="relative h-48 overflow-hidden">
+                  <img 
+                    src={attraction.image} 
+                    alt={attraction.name}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).onerror = null;
+                      (e.target as HTMLImageElement).src = 'https://placehold.co/600x400/e2e8f0/a0aec0?text=Attraction';
+                    }}
+                  />
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="absolute top-2 right-2 bg-white/80 hover:bg-white"
+                    onClick={() => handleSaveToggle(attraction.id)}
+                  >
+                    <Heart className={`h-5 w-5 ${savedAttractions.includes(attraction.id) ? 'fill-pink-500 text-pink-500' : ''}`} />
+                  </Button>
+                  <div className="absolute top-0 left-0 bg-black/70 text-white px-3 py-1 text-xs">
+                    {attraction.category}
+                  </div>
                 </div>
-              </div>
 
-              <CardContent className="p-4">
-                <div className="mb-1">
-                  <h4 className="font-semibold line-clamp-1">{attraction.name}</h4>
-                  <div className="flex items-center text-xs text-muted-foreground">
-                    <MapPin className="h-3 w-3 mr-1" />
-                    {attraction.location}
-                  </div>
-                </div>
-                
-                <div className="flex items-center mb-2">
-                  <div className="flex">
-                    {renderStars(attraction.rating)}
-                  </div>
-                  <span className="text-sm ml-1">{attraction.rating}</span>
-                </div>
-                
-                <div className="flex items-center mb-2 text-xs">
-                  <Clock className="h-3.5 w-3.5 mr-1" />
-                  <span>{attraction.timings}</span>
-                </div>
-                
-                <p className="text-sm text-muted-foreground mb-3 line-clamp-3">{attraction.description}</p>
-                
-                {attraction.culturalNote && (
-                  <div className="mb-3 bg-amber-50 border border-amber-200 p-1.5 rounded-sm">
-                    <div className="flex text-xs text-amber-700">
-                      <Info className="h-3.5 w-3.5 mr-1 flex-shrink-0" />
-                      <span className="line-clamp-2">{attraction.culturalNote}</span>
+                <CardContent className="p-4">
+                  <div className="mb-1">
+                    <h4 className="font-semibold line-clamp-1">{attraction.name}</h4>
+                    <div className="flex items-center text-xs text-muted-foreground">
+                      <MapPin className="h-3 w-3 mr-1" />
+                      {attraction.location}
                     </div>
                   </div>
-                )}
-                
-                <div className="flex justify-between items-center mt-auto">
-                  <div>
-                    {(showPricing === 'indian' ? attraction.priceIndian : attraction.priceForeigner) > 0 ? (
-                      <div className="flex items-center">
-                        <IndianRupee className="h-3 w-3 mr-0.5" />
-                        <span className="font-medium">
-                          {(showPricing === 'indian' ? attraction.priceIndian : attraction.priceForeigner).toLocaleString()}
-                        </span>
-                        <Badge variant="outline" className="ml-2 text-xs">
-                          {showPricing === 'indian' ? 'Indian' : 'Foreign'}
-                        </Badge>
-                      </div>
-                    ) : (
-                      <span className="text-sm text-green-600 font-medium">Free entry</span>
-                    )}
+                  
+                  <div className="flex items-center mb-2">
+                    <div className="flex">
+                      {renderStars(attraction.rating)}
+                    </div>
+                    <span className="text-sm ml-1">{attraction.rating}</span>
                   </div>
                   
-                  <Button 
-                    size="sm" 
-                    onClick={() => handleAddToItinerary(attraction)}
-                    className="group-hover:bg-green-600 group-hover:text-white"
-                  >
-                    <Plus className="h-4 w-4 mr-1" />
-                    Add to Itinerary
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                  <div className="flex items-center mb-2 text-xs">
+                    <Clock className="h-3.5 w-3.5 mr-1" />
+                    <span>{attraction.timings}</span>
+                  </div>
+                  
+                  <p className="text-sm text-muted-foreground mb-3 line-clamp-3">{attraction.description}</p>
+                  
+                  {attraction.culturalNote && (
+                    <div className="mb-3 bg-amber-50 border border-amber-200 p-1.5 rounded-sm">
+                      <div className="flex text-xs text-amber-700">
+                        <Info className="h-3.5 w-3.5 mr-1 flex-shrink-0" />
+                        <span className="line-clamp-2">{attraction.culturalNote}</span>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className="flex justify-between items-center mt-auto">
+                    <div>
+                      {(showPricing === 'indian' ? attraction.priceIndian : attraction.priceForeigner) > 0 ? (
+                        <div className="flex items-center">
+                          <IndianRupee className="h-3 w-3 mr-0.5" />
+                          <span className="font-medium">
+                            {(showPricing === 'indian' ? attraction.priceIndian : attraction.priceForeigner).toLocaleString()}
+                          </span>
+                          <Badge variant="outline" className="ml-2 text-xs">
+                            {showPricing === 'indian' ? 'Indian' : 'Foreign'}
+                          </Badge>
+                        </div>
+                      ) : (
+                        <span className="text-sm text-green-600 font-medium">Free entry</span>
+                      )}
+                    </div>
+                    
+                    <Button 
+                      size="sm" 
+                      onClick={() => handleAddToItinerary(attraction)}
+                      className={`group-hover:bg-green-600 group-hover:text-white ${
+                        isSelected ? "bg-green-600 text-white" : ""
+                      }`}
+                    >
+                      {isSelected ? (
+                        <>
+                          <Check className="h-4 w-4 mr-1" /> Added
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="h-4 w-4 mr-1" /> Add to Itinerary
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
     </div>

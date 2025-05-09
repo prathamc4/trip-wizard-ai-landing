@@ -27,11 +27,13 @@ import {
   Fan,
   IndianRupee,
   Loader,
+  Check,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { fetchHotels, HotelResult } from "@/utils/api";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useItinerary } from "@/contexts/ItineraryContext";
 
 const HotelResults: React.FC = () => {
   const [priceRange, setPriceRange] = useState<number[]>([1000, 20000]);
@@ -42,6 +44,9 @@ const HotelResults: React.FC = () => {
   const [hotels, setHotels] = useState<HotelResult[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Use the itinerary context
+  const { selectedHotel, selectHotel } = useItinerary();
 
   useEffect(() => {
     const loadHotels = async () => {
@@ -109,6 +114,20 @@ const HotelResults: React.FC = () => {
 
     if (!savedHotels.includes(hotelId)) {
       toast.success("Hotel saved to favorites!");
+    }
+  };
+
+  const handleSelectHotel = (hotel: HotelResult) => {
+    const isSelected = selectedHotel?.id === hotel.id;
+    
+    if (isSelected) {
+      // Deselect if already selected
+      selectHotel(null);
+      toast.info("Hotel removed from itinerary");
+    } else {
+      // Select new hotel
+      selectHotel(hotel);
+      toast.success("Hotel added to itinerary!");
     }
   };
 
@@ -311,7 +330,9 @@ const HotelResults: React.FC = () => {
           {filteredHotels.map((hotel) => (
             <Card
               key={hotel.id}
-              className="overflow-hidden hover:shadow-md transition-all duration-200"
+              className={`overflow-hidden hover:shadow-md transition-all duration-200 ${
+                selectedHotel?.id === hotel.id ? "ring-2 ring-primary ring-offset-2" : ""
+              }`}
             >
               <CardContent className="p-0">
                 <div className="grid md:grid-cols-3 gap-2">
@@ -418,7 +439,18 @@ const HotelResults: React.FC = () => {
                         </p>
                       </div>
 
-                      <Button className="mt-2 sm:mt-0">Book Now</Button>
+                      <Button 
+                        className={`mt-2 sm:mt-0 ${selectedHotel?.id === hotel.id ? "bg-green-600 hover:bg-green-700" : ""}`}
+                        onClick={() => handleSelectHotel(hotel)}
+                      >
+                        {selectedHotel?.id === hotel.id ? (
+                          <>
+                            <Check className="mr-1 h-4 w-4" /> Selected
+                          </>
+                        ) : (
+                          "Book Now"
+                        )}
+                      </Button>
                     </div>
                   </div>
                 </div>

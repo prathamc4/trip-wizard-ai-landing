@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,11 +18,13 @@ import {
   ArrowRight,
   Briefcase,
   IndianRupee,
+  Check,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { fetchFlights, FlightResult } from "@/utils/api";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useItinerary } from "@/contexts/ItineraryContext";
 
 const FlightResults: React.FC = () => {
   const [sortBy, setSortBy] = useState("price");
@@ -32,6 +35,9 @@ const FlightResults: React.FC = () => {
   const [airlines, setAirlines] = useState<string[]>(["all"]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Use the itinerary context
+  const { selectedFlight, selectFlight } = useItinerary();
 
   useEffect(() => {
     const loadFlights = async () => {
@@ -103,6 +109,20 @@ const FlightResults: React.FC = () => {
 
     if (!savedFlights.includes(flightId)) {
       toast.success("Flight saved to favorites!");
+    }
+  };
+
+  const handleSelectFlight = (flight: FlightResult) => {
+    const isSelected = selectedFlight?.id === flight.id;
+    
+    if (isSelected) {
+      // Deselect if already selected
+      selectFlight(null);
+      toast.info("Flight removed from itinerary");
+    } else {
+      // Select new flight
+      selectFlight(flight);
+      toast.success("Flight added to itinerary!");
     }
   };
 
@@ -213,7 +233,9 @@ const FlightResults: React.FC = () => {
           {filteredFlights.map((flight) => (
             <Card
               key={flight.id}
-              className="overflow-hidden hover:shadow-md transition-all duration-200"
+              className={`overflow-hidden hover:shadow-md transition-all duration-200 ${
+                selectedFlight?.id === flight.id ? "ring-2 ring-primary ring-offset-2" : ""
+              }`}
             >
               <CardContent className="p-0">
                 <div className="p-4 flex justify-between items-center">
@@ -310,7 +332,18 @@ const FlightResults: React.FC = () => {
                       </span>
                     </div>
 
-                    <Button className="ml-auto">Select Flight</Button>
+                    <Button 
+                      className={`ml-auto ${selectedFlight?.id === flight.id ? "bg-green-600 hover:bg-green-700" : ""}`}
+                      onClick={() => handleSelectFlight(flight)}
+                    >
+                      {selectedFlight?.id === flight.id ? (
+                        <>
+                          <Check className="mr-1 h-4 w-4" /> Selected
+                        </>
+                      ) : (
+                        "Select Flight"
+                      )}
+                    </Button>
                   </div>
                 </div>
 
