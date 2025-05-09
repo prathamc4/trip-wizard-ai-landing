@@ -1,7 +1,9 @@
+
 import React, { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
-import { Menu, X } from "lucide-react";
+import { Menu, X, Bookmark } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -51,6 +53,16 @@ const Header = () => {
               {item}
             </a>
           ))}
+          <Link
+            to="/my-trips"
+            className={cn(
+              "font-medium hover:text-travel-blue transition-colors flex items-center gap-1",
+              isScrolled ? "text-gray-700" : "text-white"
+            )}
+          >
+            <Bookmark className="h-4 w-4" />
+            My Trips
+          </Link>
           <Button className="bg-travel-green hover:bg-travel-darkBlue transition-colors">
             Get Started
           </Button>
@@ -93,6 +105,14 @@ const Header = () => {
                   {item}
                 </a>
               ))}
+              <Link
+                to="/my-trips"
+                className="px-6 py-3 font-medium text-gray-700 hover:bg-gray-100 hover:text-travel-blue flex items-center gap-2"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                <Bookmark className="h-4 w-4" />
+                My Trips
+              </Link>
               <div className="px-6 py-4">
                 <Button className="w-full bg-travel-green hover:bg-travel-darkBlue">
                   Get Started

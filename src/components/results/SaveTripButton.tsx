@@ -1,93 +1,198 @@
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Heart, Share2 } from 'lucide-react';
+import { Bookmark, BookmarkCheck, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useItinerary } from '@/contexts/ItineraryContext';
+import { useNavigate } from 'react-router-dom';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+  DialogClose
+} from "@/components/ui/dialog";
+import { Textarea } from '@/components/ui/textarea';
 
-interface SaveTripButtonProps {
-  className?: string;
-}
-
-const SaveTripButton: React.FC<SaveTripButtonProps> = ({ className }) => {
-  const [saved, setSaved] = useState(false);
-  const [animating, setAnimating] = useState(false);
-
-  const handleSaveTrip = () => {
-    setSaved(!saved);
-    setAnimating(true);
-    
-    setTimeout(() => setAnimating(false), 1000);
-    
-    if (!saved) {
-      toast.success('यात्रा को पसंदीदा में सहेजा गया! (Trip saved to favorites!)');
-    } else {
-      toast.info('यात्रा को पसंदीदा से हटा दिया गया (Trip removed from favorites)');
+const SaveTripButton = () => {
+  const navigate = useNavigate();
+  const [isSaving, setIsSaving] = useState(false);
+  const [notes, setNotes] = useState('');
+  const [isOpen, setIsOpen] = useState(false);
+  
+  const { hasUserSelections, saveCurrentItinerary, totalBudget } = useItinerary();
+  
+  // Function to handle saving the itinerary
+  const handleSaveTrip = async (itineraryDays: any[]) => {
+    try {
+      setIsSaving(true);
+      const tripId = await saveCurrentItinerary(itineraryDays, notes);
+      
+      if (tripId) {
+        toast.success(
+          <div>
+            <p>Itinerary saved successfully!</p>
+            <Button 
+              variant="link" 
+              className="p-0 h-auto text-sm text-blue-500 hover:text-blue-700"
+              onClick={() => navigate('/my-trips')}
+            >
+              View all saved trips
+            </Button>
+          </div>,
+          { duration: 5000 }
+        );
+        setIsOpen(false);
+      } else {
+        toast.error('Failed to save itinerary');
+      }
+    } catch (error) {
+      console.error('Error saving itinerary:', error);
+      toast.error('Something went wrong while saving');
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  const shareViaWhatsApp = () => {
-    const tripDetails = "Check out my amazing Indian travel itinerary planned with AI Travel Planner!";
-    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(tripDetails)}`;
-    window.open(whatsappUrl, '_blank');
-    toast.success('WhatsApp पर साझा करने के लिए तैयार! (Ready to share on WhatsApp!)');
-  };
-
-  const downloadPDF = () => {
-    toast.success('यात्रा PDF डाउनलोड हो रही है... (Trip PDF downloading...)');
-    // In a real implementation, this would generate a PDF
-    setTimeout(() => {
-      const link = document.createElement('a');
-      link.href = '#'; // This would be a real PDF URL
-      link.download = 'India-Travel-Itinerary.pdf';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }, 1500);
+  // Get itinerary days from the page
+  const getCurrentItineraryDays = (): any[] => {
+    // This is a simplified version - in a real app, you'd get this data 
+    // from your itinerary state or API
+    const itineraryElements = document.querySelectorAll('[data-day]');
+    const days: any[] = [];
+    
+    itineraryElements.forEach((element) => {
+      const dayNumber = parseInt(element.getAttribute('data-day') || '0');
+      const dateText = element.querySelector('[data-date]')?.textContent || '';
+      
+      const activities: any[] = [];
+      element.querySelectorAll('[data-activity]').forEach((activityEl) => {
+        const time = activityEl.querySelector('[data-time]')?.textContent || '';
+        const title = activityEl.querySelector('[data-title]')?.textContent || '';
+        const description = activityEl.querySelector('[data-description]')?.textContent || '';
+        const cost = parseFloat(activityEl.querySelector('[data-cost]')?.getAttribute('data-cost-value') || '0');
+        const type = activityEl.getAttribute('data-activity-type') || '';
+        const icon = activityEl.getAttribute('data-activity-icon') || '';
+        const notes = activityEl.querySelector('[data-notes]')?.textContent || '';
+        
+        activities.push({
+          time,
+          title,
+          description,
+          cost,
+          type,
+          icon,
+          notes
+        });
+      });
+      
+      days.push({
+        day: dayNumber,
+        date: dateText,
+        activities
+      });
+    });
+    
+    // If no days were found in the DOM, create a dummy day with minimal data
+    if (days.length === 0) {
+      // Get search data from sessionStorage
+      const searchData = sessionStorage.getItem('travelSearchData');
+      let startDate = new Date().toISOString().split('T')[0];
+      
+      if (searchData) {
+        try {
+          const parsedData = JSON.parse(searchData);
+          if (parsedData.startDate) {
+            startDate = parsedData.startDate;
+          }
+        } catch (e) {
+          console.error('Error parsing search data:', e);
+        }
+      }
+      
+      days.push({
+        day: 1,
+        date: startDate,
+        activities: []
+      });
+    }
+    
+    return days;
   };
 
   return (
-    <div className="flex gap-2">
-      <Button
-        variant="outline"
-        className={`relative group ${className}`}
-        onClick={handleSaveTrip}
-      >
-        <Heart 
-          className={`mr-2 ${saved ? 'fill-pink-500 text-pink-500' : ''} 
-            transition-all duration-300 ${animating ? 'scale-150' : ''}`} 
-        />
-        {saved ? 'Saved' : 'Save Trip'}
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>
+        <Button 
+          variant={hasUserSelections ? "default" : "outline"}
+          disabled={!hasUserSelections}
+          className={hasUserSelections ? "bg-blue-600 hover:bg-blue-700" : ""}
+        >
+          <Bookmark className="mr-1.5 h-4 w-4" />
+          Save Itinerary
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Save Your Travel Itinerary</DialogTitle>
+          <DialogDescription>
+            Save your current itinerary to access it anytime from your "My Trips" page.
+          </DialogDescription>
+        </DialogHeader>
         
-        {animating && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="absolute animate-ping w-8 h-8 rounded-full bg-pink-400 opacity-30"></div>
+        <div className="py-4">
+          <div className="mb-5 bg-blue-50 p-3 rounded-md text-sm">
+            <h4 className="font-medium text-blue-700 mb-1">Itinerary Summary</h4>
+            <div className="grid grid-cols-2 gap-y-1 gap-x-4">
+              <div className="text-muted-foreground">Total Budget:</div>
+              <div className="font-medium">₹{totalBudget.toLocaleString()}</div>
+              
+              <div className="text-muted-foreground">Selected Items:</div>
+              <div className="font-medium">{hasUserSelections ? 'Custom selections' : 'Default itinerary'}</div>
+            </div>
           </div>
-        )}
-      </Button>
-      
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="outline">
-            <Share2 className="mr-2 h-4 w-4" />
-            Share
+          
+          <div className="space-y-2">
+            <label htmlFor="notes" className="font-medium text-sm">
+              Add Notes (Optional)
+            </label>
+            <Textarea 
+              id="notes"
+              placeholder="Add any special requirements, preferences, or notes about this trip..."
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              className="min-h-24"
+            />
+          </div>
+        </div>
+
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button variant="outline">Cancel</Button>
+          </DialogClose>
+          <Button 
+            onClick={() => handleSaveTrip(getCurrentItineraryDays())}
+            disabled={isSaving}
+            className="gap-1"
+          >
+            {isSaving ? (
+              <>
+                <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              <>
+                <BookmarkCheck className="mr-1 h-4 w-4" />
+                Save Trip
+              </>
+            )}
           </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={shareViaWhatsApp}>
-            Share via WhatsApp
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={downloadPDF}>
-            Download PDF (Hindi/English)
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };
 

@@ -645,10 +645,10 @@ const ItineraryResults: React.FC = () => {
       
       <div className="space-y-8">
         {itinerary.map((day, dayIdx) => (
-          <div key={`day-${day.day}`} className="space-y-3">
+          <div key={`day-${day.day}`} className="space-y-3" data-day={day.day}>
             <div className="flex justify-between items-center">
               <h4 className="font-semibold text-lg flex items-center">
-                Day {day.day} <span className="text-sm font-normal text-muted-foreground ml-2">{day.date}</span>
+                Day {day.day} <span className="text-sm font-normal text-muted-foreground ml-2" data-date={day.date}>{day.date}</span>
               </h4>
               <Button 
                 variant="ghost" 
@@ -680,10 +680,10 @@ const ItineraryResults: React.FC = () => {
                 }
                 
                 return (
-                  <div key={activity.id} className="pl-12 relative">
+                  <div key={activity.id} className="pl-12 relative" data-activity="" data-activity-type={activity.type} data-activity-icon={activity.icon}>
                     {/* Time indicator and icon */}
                     <div className="absolute left-0 top-0 flex flex-col items-center">
-                      <div className="text-xs font-medium mb-1">{activity.time}</div>
+                      <div className="text-xs font-medium mb-1" data-time={activity.time}>{activity.time}</div>
                       <div className={`rounded-full p-1.5 z-10 ${getActivityColor(activity.type)}`}>
                         {getActivityIcon(activity.icon)}
                       </div>
@@ -695,7 +695,7 @@ const ItineraryResults: React.FC = () => {
                     } ${!isUserSelected && (activity.id.startsWith('flight-') || activity.id.startsWith('hotel-') || activity.id.startsWith('attraction-')) ? 'opacity-70' : ''}`}>
                       <div className="flex justify-between">
                         <div className="flex items-center gap-2">
-                          <h5 className="font-medium">{activity.title}</h5>
+                          <h5 className="font-medium" data-title={activity.title}>{activity.title}</h5>
                           {isUserSelected && (
                             <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-200 border-blue-200">
                               Your Selection
@@ -723,10 +723,10 @@ const ItineraryResults: React.FC = () => {
                           </Button>
                         </div>
                       </div>
-                      <p className="text-sm text-muted-foreground">{activity.description}</p>
+                      <p className="text-sm text-muted-foreground" data-description={activity.description}>{activity.description}</p>
                       
                       {activity.notes && (
-                        <div className="mt-1.5 bg-amber-50 p-1.5 rounded-sm text-xs text-amber-700">
+                        <div className="mt-1.5 bg-amber-50 p-1.5 rounded-sm text-xs text-amber-700" data-notes={activity.notes}>
                           {activity.notes}
                         </div>
                       )}
@@ -737,7 +737,7 @@ const ItineraryResults: React.FC = () => {
                           <span>Duration: ~2 hours</span>
                         </div>
                         {activity.cost > 0 && (
-                          <div className="flex items-center font-medium">
+                          <div className="flex items-center font-medium" data-cost={activity.cost} data-cost-value={activity.cost}>
                             <IndianRupee className="h-3 w-3 mr-0.5" />
                             <span>{activity.cost.toLocaleString()}</span>
                           </div>
